@@ -6,53 +6,40 @@
 //
 
 import SwiftUI
-import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
-
-    var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
+  var body: some View {
+    NavigationStack {
+      ContentUnavailableView {
+        Label("No Workouts Yet", systemImage: "dumbbell")
+      } description: {
+        Text("Add a workout to get started.")
+      }
+      .navigationTitle("Workouts")
+      .toolbar {
+        ToolbarItem(placement: .topBarTrailing) {
+          Menu("Add Workout", systemImage: "plus") {
+            NavigationLink(value: NewWorkoutRoute.blank) {
+              Label("Blank Workout", systemImage: "doc")
             }
-            .toolbar {
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
+            NavigationLink(value: NewWorkoutRoute.templates) {
+              Label("Choose a Template", systemImage: "rectangle.stack")
             }
-        } detail: {
-            Text("Select an item")
+          }
         }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
+      }
+      .navigationDestination(for: NewWorkoutRoute.self) { route in
+        switch route {
+        case .blank:
+          BlankWorkoutView()
+        case .templates:
+          WorkoutTemplatePickerView()
         }
+      }
     }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
-            }
-        }
-    }
+  }
 }
 
 #Preview {
-    ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
+  ContentView()
 }
