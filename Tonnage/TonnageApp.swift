@@ -6,12 +6,30 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct TonnageApp: App {
+  private let modelContainer: ModelContainer = {
+    let configuration = ModelConfiguration(
+      schema: TonnageSchema.schema,
+      isStoredInMemoryOnly: false
+    )
+
+    do {
+      return try ModelContainer(
+        for: TonnageSchema.schema,
+        configurations: [configuration]
+      )
+    } catch {
+      fatalError("Unable to create the Tonnage model container: \(error)")
+    }
+  }()
+
   var body: some Scene {
     WindowGroup {
       ContentView()
     }
+    .modelContainer(modelContainer)
   }
 }

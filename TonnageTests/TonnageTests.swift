@@ -5,15 +5,276 @@
 //  Created by Matt Bolaños on 7/25/26.
 //
 
+import Foundation
+import SwiftData
 import Testing
 @testable import Tonnage
 
+@MainActor
 struct TonnageTests {
+  @Test
+  func volumeLoadFavorsMoreRepsWhenTheProductIsGreater() throws {
+    let benchPress = try Exercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let workout = try Workout()
+    let benchEntry = try workout.addExercise(benchPress)
 
-    @Test func example() async throws {
-        // Write your test here and use APIs like `#expect(...)` to check expected conditions.
-        // Swift Testing Documentation
-        // https://developer.apple.com/documentation/testing
+    let twelveByForty = try benchEntry.addSet(
+      reps: 12,
+      weight: Decimal(40),
+      weightUnit: .pounds
+    )
+    let fiveByFortyFive = try benchEntry.addSet(
+      reps: 5,
+      weight: Decimal(45),
+      weightUnit: .pounds
+    )
+
+    #expect(twelveByForty.volumeLoad?.value == Decimal(480))
+    #expect(fiveByFortyFive.volumeLoad?.value == Decimal(225))
+    #expect(
+      twelveByForty.volumeLoad?.value ?? .zero
+        > fiveByFortyFive.volumeLoad?.value ?? .zero
+    )
+  }
+
+  @Test
+  func workoutLoadSumsWeightedWorkingSetsOnly() throws {
+    let benchPress = try Exercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let pushUp = try Exercise(
+      name: "Push-up",
+      loadMode: .bodyweight
+    )
+    let workout = try Workout()
+    let benchEntry = try workout.addExercise(benchPress)
+    let pushUpEntry = try workout.addExercise(pushUp)
+
+    try benchEntry.addSet(reps: 12, weight: 40, weightUnit: .pounds)
+    try benchEntry.addSet(reps: 5, weight: 45, weightUnit: .pounds)
+    try benchEntry.addSet(kind: .warmup, reps: 10, weight: 20, weightUnit: .pounds)
+    try pushUpEntry.addSet(reps: 20)
+    try pushUpEntry.addSet(reps: 5, weight: 10, weightUnit: .pounds)
+
+    let load = workout.volumeLoad(in: .pounds)
+
+    #expect(load == VolumeLoad(value: 755, unit: .pounds))
+    #expect(workout.volumeLoad(for: benchPress.id, in: .pounds)?.value == 705)
+    #expect(workout.volumeLoad(for: pushUp.id, in: .pounds)?.value == 50)
+  }
+
+  @Test
+  func bodyweightOnlyWorkoutHasNoVolumeLoad() throws {
+    let pushUp = try Exercise(name: "Push-up", loadMode: .bodyweight)
+    let workout = try Workout()
+    let entry = try workout.addExercise(pushUp)
+    try entry.addSet(reps: 20)
+
+    #expect(workout.volumeLoad(in: .pounds) == nil)
+  }
+
+  @Test
+  func volumeLoadNormalizesMixedUnits() throws {
+    let squat = try Exercise(name: "Squat", loadMode: .externalResistance)
+    let workout = try Workout()
+    let entry = try workout.addExercise(squat)
+    try entry.addSet(reps: 10, weight: 100, weightUnit: .pounds)
+    try entry.addSet(reps: 10, weight: 10, weightUnit: .kilograms)
+
+    let expected = Decimal(1_000) + WeightUnit.kilograms.convert(100, to: .pounds)
+
+    #expect(workout.volumeLoad(in: .pounds)?.value == expected)
+  }
+
+  @Test
+  func invalidSetsAreRejectedBeforeJoiningTheWorkout() throws {
+    let benchPress = try Exercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let workout = try Workout()
+    let entry = try workout.addExercise(benchPress)
+
+    #expect(throws: WorkoutModelError.missingWeight) {
+      try entry.addSet(reps: 5)
+    }
+    #expect(throws: WorkoutModelError.invalidWeightPrecision) {
+      try entry.addSet(reps: 5, weight: Decimal(string: "42.25"), weightUnit: .pounds)
+    }
+    #expect(entry.exerciseSets.isEmpty)
+  }
+
+  @Test
+  func workoutLifecycleUsesTimestampsWithoutPersistingElapsedSeconds() throws {
+    let start = Date(timeIntervalSince1970: 1_000)
+    let workout = try Workout(startedAt: start, timeZoneIdentifier: "America/New_York")
+
+    #expect(workout.elapsedDuration(at: start.addingTimeInterval(90)) == 90)
+    #expect(throws: WorkoutModelError.workoutHasNoSets) {
+      try workout.complete(at: start.addingTimeInterval(120))
     }
 
+    let pushUp = try Exercise(name: "Push-up", loadMode: .bodyweight)
+    let entry = try workout.addExercise(pushUp)
+    try entry.addSet(reps: 10)
+    try workout.complete(at: start.addingTimeInterval(120))
+
+    #expect(workout.status == .completed)
+    #expect(workout.elapsedDuration() == 120)
+    #expect(throws: WorkoutModelError.workoutAlreadyCompleted) {
+      try workout.complete()
+    }
+  }
+
+  @Test
+  func manualCompletedWorkoutMayHaveUnknownDuration() throws {
+    let workout = try Workout(startedAt: .now)
+    let pushUp = try Exercise(name: "Push-up", loadMode: .bodyweight)
+    let entry = try workout.addExercise(pushUp)
+    try entry.addSet(reps: 10, completedAt: nil)
+
+    try workout.complete(at: nil)
+
+    #expect(workout.status == .completed)
+    #expect(workout.endedAt == nil)
+    #expect(workout.elapsedDuration() == nil)
+  }
+
+  @Test
+  func templateCreatesAnIndependentWorkoutSnapshot() throws {
+    let benchPress = try Exercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let squat = try Exercise(name: "Squat", loadMode: .externalResistance)
+    let template = try WorkoutTemplate(name: "Push Day")
+    try template.addExercise(benchPress, plannedWorkingSetCount: 3)
+
+    let workout = try template.makeWorkout()
+    try template.addExercise(squat, plannedWorkingSetCount: 4)
+
+    #expect(workout.sourceTemplate === template)
+    #expect(workout.workoutExercises.count == 1)
+    #expect(workout.orderedExercises.first?.exercise === benchPress)
+    #expect(workout.orderedExercises.first?.plannedWorkingSetCount == 3)
+    #expect(workout.workoutExercises.first?.exerciseSets.isEmpty == true)
+  }
+
+  @Test
+  func workoutCanCreateATemplateWithoutCopyingSetValues() throws {
+    let benchPress = try Exercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let workout = try Workout()
+    let entry = try workout.addExercise(benchPress)
+    try entry.addSet(reps: 12, weight: 40, weightUnit: .pounds)
+    try entry.addSet(reps: 10, weight: 45, weightUnit: .pounds)
+    try entry.addSet(kind: .warmup, reps: 10, weight: 20, weightUnit: .pounds)
+
+    let template = try workout.makeTemplate(named: "Bench Day")
+
+    #expect(template.templateExercises.count == 1)
+    #expect(template.templateExercises.first?.plannedWorkingSetCount == 2)
+  }
+
+  @Test
+  func storeEnforcesOneActiveWorkoutAndUniqueActiveNames() throws {
+    let container = try makeContainer()
+    let store = TrainingDataStore(modelContext: container.mainContext)
+
+    try store.startWorkout()
+    #expect(throws: WorkoutModelError.activeWorkoutExists) {
+      try store.startWorkout()
+    }
+
+    try store.createExercise(name: "Bench Press", loadMode: .externalResistance)
+    #expect(throws: WorkoutModelError.duplicateExerciseName) {
+      try store.createExercise(name: "bench press", loadMode: .externalResistance)
+    }
+
+    try store.createTemplate(name: "Push Day")
+    #expect(throws: WorkoutModelError.duplicateTemplateName) {
+      try store.createTemplate(name: "push day")
+    }
+  }
+
+  @Test
+  func referencedTemplateIsArchivedInsteadOfDeleted() throws {
+    let container = try makeContainer()
+    let context = container.mainContext
+    let store = TrainingDataStore(modelContext: context)
+    let exercise = try store.createExercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let template = try store.createTemplate(name: "Push Day")
+    try template.addExercise(exercise, plannedWorkingSetCount: 3)
+    let workout = try store.startWorkout(from: template)
+    try context.save()
+
+    store.remove(template)
+    try context.save()
+
+    #expect(template.isArchived)
+    #expect(workout.sourceTemplate === template)
+    #expect(try context.fetchCount(FetchDescriptor<WorkoutTemplate>()) == 1)
+  }
+
+  @Test
+  func deletingWorkoutCascadesToLoggedChildren() throws {
+    let container = try makeContainer()
+    let context = container.mainContext
+    let exercise = try Exercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let workout = try Workout()
+    let workoutExercise = try workout.addExercise(exercise)
+    try workoutExercise.addSet(reps: 12, weight: 40, weightUnit: .pounds)
+    context.insert(exercise)
+    context.insert(workout)
+    try context.save()
+
+    context.delete(workout)
+    try context.save()
+
+    #expect(try context.fetchCount(FetchDescriptor<Workout>()) == 0)
+    #expect(try context.fetchCount(FetchDescriptor<WorkoutExercise>()) == 0)
+    #expect(try context.fetchCount(FetchDescriptor<ExerciseSet>()) == 0)
+    #expect(try context.fetchCount(FetchDescriptor<Exercise>()) == 1)
+  }
+
+  @Test
+  func usedExerciseClassificationIsLocked() throws {
+    let benchPress = try Exercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let workout = try Workout()
+    let entry = try workout.addExercise(benchPress)
+    try entry.addSet(reps: 12, weight: 40, weightUnit: .pounds)
+
+    #expect(throws: WorkoutModelError.exerciseClassificationInUse) {
+      try benchPress.updateClassification(
+        loadMode: .bodyweight,
+        repetitionMode: .standard
+      )
+    }
+  }
+
+  private func makeContainer() throws -> ModelContainer {
+    let configuration = ModelConfiguration(
+      schema: TonnageSchema.schema,
+      isStoredInMemoryOnly: true
+    )
+    return try ModelContainer(
+      for: TonnageSchema.schema,
+      configurations: [configuration]
+    )
+  }
 }

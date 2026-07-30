@@ -1,0 +1,179 @@
+//
+//  Workout.swift
+//  Tonnage
+//
+
+
+import Foundation
+import SwiftData
+
+@Model
+final class Workout {
+  var id: UUID = UUID()
+  var name: String?
+  var notes: String?
+  var status: WorkoutStatus = WorkoutStatus.inProgress
+  var startedAt: Date = Date.now
+  var endedAt: Date?
+  var timeZoneIdentifier: String = TimeZone.current.identifier
+  var createdAt: Date = Date.now
+  var updatedAt: Date = Date.now
+  var sourceTemplate: WorkoutTemplate?
+
+  @Relationship(deleteRule: .cascade, inverse: \WorkoutExercise.workout)
+  var workoutExercises: [WorkoutExercise] = []
+
+  init(
+    id: UUID = UUID(),
+    name: String? = nil,
+    notes: String? = nil,
+    status: WorkoutStatus = .inProgress,
+    startedAt: Date = .now,
+    endedAt: Date? = nil,
+    timeZoneIdentifier: String = TimeZone.current.identifier,
+    createdAt: Date = .now,
+    updatedAt: Date = .now,
+    sourceTemplate: WorkoutTemplate? = nil
+  ) throws {
+    if let endedAt, endedAt < startedAt {
+      throw WorkoutModelError.endBeforeStart
+    }
+
+    self.id = id
+    self.name = name?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+    self.notes = notes?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+    self.status = status
+    self.startedAt = startedAt
+    self.endedAt = endedAt
+    self.timeZoneIdentifier = timeZoneIdentifier
+    self.createdAt = createdAt
+    self.updatedAt = updatedAt
+    self.sourceTemplate = sourceTemplate
+  }
+
+  var orderedExercises: [WorkoutExercise] {
+    workoutExercises.sorted { lhs, rhs in
+      if lhs.position == rhs.position {
+        lhs.id.uuidString < rhs.id.uuidString
+      } else {
+        lhs.position < rhs.position
+      }
+    }
+  }
+
+  var isCompletable: Bool {
+    workoutExercises.contains { !$0.exerciseSets.isEmpty }
+  }
+
+  func elapsedDuration(at currentDate: Date = .now) -> TimeInterval? {
+    let effectiveEnd: Date?
+    if let endedAt {
+      effectiveEnd = endedAt
+    } else if status == .inProgress {
+      effectiveEnd = currentDate
+    } else {
+      effectiveEnd = nil
+    }
+
+    guard let effectiveEnd, effectiveEnd >= startedAt else { return nil }
+    return effectiveEnd.timeIntervalSince(startedAt)
+  }
+
+  @discardableResult
+  func addExercise(
+    _ exercise: Exercise,
+    plannedWorkingSetCount: Int? = nil,
+    at date: Date = .now
+  ) throws -> WorkoutExercise {
+    guard !exercise.isArchived else { throw WorkoutModelError.exerciseIsArchived }
+
+    let workoutExercise = try WorkoutExercise(
+      position: nextExercisePosition,
+      plannedWorkingSetCount: plannedWorkingSetCount,
+      workout: self,
+      exercise: exercise
+    )
+    workoutExercises.append(workoutExercise)
+    updatedAt = date
+    return workoutExercise
+  }
+
+  func complete(at endDate: Date? = .now) throws {
+    guard status == .inProgress else { throw WorkoutModelError.workoutAlreadyCompleted }
+    guard isCompletable else { throw WorkoutModelError.workoutHasNoSets }
+
+    if let endDate, endDate < startedAt {
+      throw WorkoutModelError.endBeforeStart
+    }
+
+    for workoutExercise in workoutExercises {
+      try workoutExercise.validate()
+    }
+
+    endedAt = endDate
+    status = .completed
+    updatedAt = endDate ?? .now
+  }
+
+  func updateTiming(
+    startedAt: Date,
+    endedAt: Date?,
+    timeZoneIdentifier: String,
+    at date: Date = .now
+  ) throws {
+    if let endedAt, endedAt < startedAt {
+      throw WorkoutModelError.endBeforeStart
+    }
+
+    self.startedAt = startedAt
+    self.endedAt = endedAt
+    self.timeZoneIdentifier = timeZoneIdentifier
+    updatedAt = date
+  }
+
+  func volumeLoad(in unit: WeightUnit) -> VolumeLoad? {
+    let values = workoutExercises.compactMap { $0.volumeLoad(in: unit)?.value }
+    guard !values.isEmpty else { return nil }
+
+    return VolumeLoad(value: values.reduce(Decimal.zero, +), unit: unit)
+  }
+
+  func volumeLoad(for exerciseID: UUID, in unit: WeightUnit) -> VolumeLoad? {
+    let values = workoutExercises
+      .filter { $0.exercise?.id == exerciseID }
+      .compactMap { $0.volumeLoad(in: unit)?.value }
+    guard !values.isEmpty else { return nil }
+
+    return VolumeLoad(value: values.reduce(Decimal.zero, +), unit: unit)
+  }
+
+  func makeTemplate(
+    named name: String,
+    notes: String? = nil,
+    at date: Date = .now
+  ) throws -> WorkoutTemplate {
+    let template = try WorkoutTemplate(name: name, notes: notes, createdAt: date, updatedAt: date)
+
+    for workoutExercise in orderedExercises {
+      guard let exercise = workoutExercise.exercise else { continue }
+      let workingSetCount = workoutExercise.exerciseSets.count { $0.kind == .working }
+      try template.addExercise(
+        exercise,
+        plannedWorkingSetCount: workingSetCount > 0 ? workingSetCount : nil,
+        at: date
+      )
+    }
+
+    return template
+  }
+
+  private var nextExercisePosition: Int {
+    (workoutExercises.map(\.position).max() ?? -1) + 1
+  }
+}
+
+private extension String {
+  var nilIfEmpty: String? {
+    isEmpty ? nil : self
+  }
+}
