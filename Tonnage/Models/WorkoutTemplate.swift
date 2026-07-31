@@ -55,6 +55,17 @@ final class WorkoutTemplate {
     sourceWorkouts.isEmpty
   }
 
+  var hasUnavailableExercises: Bool {
+    orderedExercises.contains { templateExercise in
+      guard let exercise = templateExercise.exercise else { return true }
+      return exercise.isArchived
+    }
+  }
+
+  var isReadyToStart: Bool {
+    !isArchived && !orderedExercises.isEmpty && !hasUnavailableExercises
+  }
+
   @discardableResult
   func addExercise(
     _ exercise: Exercise,
@@ -113,6 +124,19 @@ final class WorkoutTemplate {
     guard !normalizedName.isEmpty else { throw WorkoutModelError.emptyName }
 
     name = normalizedName
+    updatedAt = date
+  }
+
+  func updateDetails(
+    name newName: String,
+    notes newNotes: String?,
+    at date: Date = .now
+  ) throws {
+    let normalizedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !normalizedName.isEmpty else { throw WorkoutModelError.emptyName }
+
+    name = normalizedName
+    notes = newNotes?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
     updatedAt = date
   }
 

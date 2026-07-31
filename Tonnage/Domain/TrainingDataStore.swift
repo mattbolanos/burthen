@@ -117,16 +117,66 @@ struct TrainingDataStore {
     }
   }
 
-  func createTemplate(name: String, notes: String? = nil) throws -> WorkoutTemplate {
+  func createTemplate(
+    name: String,
+    notes: String? = nil,
+    exercises: [TemplateExercisePlan] = []
+  ) throws -> WorkoutTemplate {
     let normalizedName = try validatedName(name)
     let templates = try modelContext.fetch(FetchDescriptor<WorkoutTemplate>())
     guard !templates.contains(where: { !$0.isArchived && namesMatch($0.name, normalizedName) }) else {
       throw WorkoutModelError.duplicateTemplateName
     }
+    try validate(exercises)
 
     let template = try WorkoutTemplate(name: normalizedName, notes: notes)
     modelContext.insert(template)
+    try append(exercises, to: template)
     return template
+  }
+
+  func updateTemplate(
+    _ template: WorkoutTemplate,
+    name: String,
+    notes: String?,
+    exercises: [TemplateExercisePlan],
+    at date: Date = .now
+  ) throws {
+    let normalizedName = try validatedName(name)
+    let templates = try modelContext.fetch(FetchDescriptor<WorkoutTemplate>())
+    guard !templates.contains(where: {
+      $0 !== template
+        && !$0.isArchived
+        && !template.isArchived
+        && namesMatch($0.name, normalizedName)
+    }) else {
+      throw WorkoutModelError.duplicateTemplateName
+    }
+    try validate(exercises)
+
+    try template.updateDetails(name: normalizedName, notes: notes, at: date)
+
+    let previousExercises = template.templateExercises
+    template.templateExercises.removeAll()
+    for templateExercise in previousExercises {
+      modelContext.delete(templateExercise)
+    }
+    try append(exercises, to: template, at: date)
+  }
+
+  func archive(_ template: WorkoutTemplate) {
+    template.archive()
+  }
+
+  func restore(_ template: WorkoutTemplate) throws {
+    let templates = try modelContext.fetch(FetchDescriptor<WorkoutTemplate>())
+    guard !templates.contains(where: {
+      $0 !== template && !$0.isArchived && namesMatch($0.name, template.name)
+    }) else {
+      throw WorkoutModelError.duplicateTemplateName
+    }
+
+    template.restore()
   }
 
   func discard(_ workout: Workout) throws {
@@ -222,6 +272,38 @@ struct TrainingDataStore {
     let workouts = try modelContext.fetch(FetchDescriptor<Workout>())
     guard !workouts.contains(where: { $0.status == .inProgress }) else {
       throw WorkoutModelError.activeWorkoutExists
+    }
+  }
+
+  private func validate(_ exercises: [TemplateExercisePlan]) throws {
+    var exerciseIDs = Set<UUID>()
+
+    for plan in exercises {
+      guard !plan.exercise.isArchived else {
+        throw WorkoutModelError.exerciseIsArchived
+      }
+      if let plannedWorkingSetCount = plan.plannedWorkingSetCount,
+         plannedWorkingSetCount <= 0 {
+        throw WorkoutModelError.invalidPlannedSetCount
+      }
+      guard exerciseIDs.insert(plan.exercise.id).inserted else {
+        throw WorkoutModelError.duplicateExerciseInTemplate
+      }
+    }
+  }
+
+  private func append(
+    _ exercises: [TemplateExercisePlan],
+    to template: WorkoutTemplate,
+    at date: Date = .now
+  ) throws {
+    for plan in exercises {
+      let templateExercise = try template.addExercise(
+        plan.exercise,
+        plannedWorkingSetCount: plan.plannedWorkingSetCount,
+        at: date
+      )
+      modelContext.insert(templateExercise)
     }
   }
 

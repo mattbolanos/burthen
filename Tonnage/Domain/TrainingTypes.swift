@@ -63,6 +63,7 @@ struct VolumeLoad: Equatable {
 enum WorkoutModelError: Error, Equatable {
   case activeWorkoutExists
   case duplicateExerciseName
+  case duplicateExerciseInTemplate
   case duplicateTemplateName
   case emptyName
   case endBeforeStart
@@ -83,6 +84,11 @@ enum WorkoutModelError: Error, Equatable {
   case workoutAlreadyCompleted
   case workoutHasNoSets
   case workoutIsNotInProgress
+}
+
+struct TemplateExercisePlan {
+  let exercise: Exercise
+  let plannedWorkingSetCount: Int?
 }
 
 extension Decimal {

@@ -204,6 +204,139 @@ struct TonnageTests {
   }
 
   @Test
+  func storeCreatesTemplateWithAnOrderedExercisePlan() throws {
+    let container = try makeContainer()
+    let context = container.mainContext
+    let store = TrainingDataStore(modelContext: context)
+    let squat = try store.createExercise(
+      name: "Squat",
+      loadMode: .externalResistance
+    )
+    let pullUp = try store.createExercise(
+      name: "Pull-up",
+      loadMode: .bodyweight
+    )
+
+    let template = try store.createTemplate(
+      name: "Full Body",
+      notes: "  Strength day  ",
+      exercises: [
+        TemplateExercisePlan(
+          exercise: squat,
+          plannedWorkingSetCount: 4
+        ),
+        TemplateExercisePlan(
+          exercise: pullUp,
+          plannedWorkingSetCount: 3
+        ),
+      ]
+    )
+    try context.save()
+
+    #expect(template.name == "Full Body")
+    #expect(template.notes == "Strength day")
+    #expect(template.orderedExercises.map(\.position) == [0, 1])
+    #expect(
+      template.orderedExercises.compactMap { $0.exercise?.name }
+        == ["Squat", "Pull-up"]
+    )
+    #expect(
+      template.orderedExercises.map(\.plannedWorkingSetCount)
+        == [4, 3]
+    )
+    #expect(try context.fetchCount(FetchDescriptor<TemplateExercise>()) == 2)
+  }
+
+  @Test
+  func updatingTemplateReplacesItsExercisePlan() throws {
+    let container = try makeContainer()
+    let context = container.mainContext
+    let store = TrainingDataStore(modelContext: context)
+    let benchPress = try store.createExercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let row = try store.createExercise(
+      name: "Barbell Row",
+      loadMode: .externalResistance
+    )
+    let template = try store.createTemplate(
+      name: "Upper Body",
+      exercises: [
+        TemplateExercisePlan(
+          exercise: benchPress,
+          plannedWorkingSetCount: 3
+        ),
+        TemplateExercisePlan(
+          exercise: row,
+          plannedWorkingSetCount: 4
+        ),
+      ]
+    )
+    try context.save()
+
+    let updateDate = Date(timeIntervalSince1970: 4_000)
+    try store.updateTemplate(
+      template,
+      name: "  Pull Day  ",
+      notes: "  Keep reps controlled  ",
+      exercises: [
+        TemplateExercisePlan(
+          exercise: row,
+          plannedWorkingSetCount: 5
+        ),
+      ],
+      at: updateDate
+    )
+    try context.save()
+
+    #expect(template.name == "Pull Day")
+    #expect(template.notes == "Keep reps controlled")
+    #expect(template.updatedAt == updateDate)
+    #expect(template.orderedExercises.count == 1)
+    #expect(template.orderedExercises.first?.exercise === row)
+    #expect(template.orderedExercises.first?.plannedWorkingSetCount == 5)
+    #expect(try context.fetchCount(FetchDescriptor<TemplateExercise>()) == 1)
+  }
+
+  @Test
+  func restoringTemplatePreservesUniqueActiveNames() throws {
+    let container = try makeContainer()
+    let store = TrainingDataStore(modelContext: container.mainContext)
+    let archivedTemplate = try store.createTemplate(name: "Push Day")
+    store.archive(archivedTemplate)
+    _ = try store.createTemplate(name: "push day")
+
+    #expect(throws: WorkoutModelError.duplicateTemplateName) {
+      try store.restore(archivedTemplate)
+    }
+    #expect(archivedTemplate.isArchived)
+  }
+
+  @Test
+  func templateRejectsDuplicateExercisesBeforeInsertion() throws {
+    let container = try makeContainer()
+    let context = container.mainContext
+    let store = TrainingDataStore(modelContext: context)
+    let squat = try store.createExercise(
+      name: "Squat",
+      loadMode: .externalResistance
+    )
+    let duplicatePlan = TemplateExercisePlan(
+      exercise: squat,
+      plannedWorkingSetCount: 3
+    )
+
+    #expect(throws: WorkoutModelError.duplicateExerciseInTemplate) {
+      try store.createTemplate(
+        name: "Leg Day",
+        exercises: [duplicatePlan, duplicatePlan]
+      )
+    }
+    #expect(try context.fetchCount(FetchDescriptor<WorkoutTemplate>()) == 0)
+  }
+
+  @Test
   func referencedTemplateIsArchivedInsteadOfDeleted() throws {
     let container = try makeContainer()
     let context = container.mainContext

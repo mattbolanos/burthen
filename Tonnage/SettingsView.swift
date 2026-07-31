@@ -12,6 +12,12 @@ struct SettingsView: View {
       Form {
         Section("Training") {
           NavigationLink {
+            TemplateManagementView()
+          } label: {
+            Label("Workout Templates", systemImage: "rectangle.stack")
+          }
+
+          NavigationLink {
             ExerciseManagementView()
           } label: {
             Label("Exercises", systemImage: "dumbbell")
