@@ -301,12 +301,14 @@ private struct TemplateExerciseSelectionRow: View {
 
         Spacer()
 
-        if isAlreadyAdded || isSelected {
+        if isAlreadyAdded {
           Image(systemName: "checkmark")
             .fontWeight(.semibold)
-            .foregroundStyle(
-              isAlreadyAdded ? Color.secondary : Color.accentColor
-            )
+            .foregroundStyle(.secondary)
+        } else if isSelected {
+          Image(systemName: "checkmark")
+            .fontWeight(.semibold)
+            .foregroundStyle(.tint)
         }
       }
       .contentShape(.rect)

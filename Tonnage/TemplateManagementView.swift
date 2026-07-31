@@ -69,7 +69,6 @@ struct TemplateManagementView: View {
                 Button("Restore", systemImage: "arrow.uturn.backward") {
                   restore(template)
                 }
-                .tint(.blue)
               }
               .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 if template.canBePermanentlyDeleted {

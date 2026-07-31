@@ -29,6 +29,8 @@ struct TonnageApp: App {
   var body: some Scene {
     WindowGroup {
       ContentView()
+        .tint(.mint)
+        .preferredColorScheme(.dark)
     }
     .modelContainer(modelContainer)
   }

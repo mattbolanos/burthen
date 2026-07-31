@@ -65,7 +65,6 @@ struct ExerciseManagementView: View {
                   Button("Restore", systemImage: "arrow.uturn.backward") {
                     restore(exercise)
                   }
-                  .tint(.blue)
                 }
               }
               .swipeActions(edge: .trailing, allowsFullSwipe: false) {
