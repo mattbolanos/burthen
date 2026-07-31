@@ -5,8 +5,8 @@
 //  Created by Matt Bolaños on 7/25/26.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 @main
 struct TonnageApp: App {
@@ -29,7 +29,7 @@ struct TonnageApp: App {
   var body: some Scene {
     WindowGroup {
       ContentView()
-        .tint(.mint)
+        .tint(.pink)
         .preferredColorScheme(.dark)
     }
     .modelContainer(modelContainer)
