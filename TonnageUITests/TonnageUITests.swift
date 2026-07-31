@@ -23,14 +23,31 @@ final class TonnageUITests: XCTestCase {
     }
 
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    func testCanOpenExerciseManagementFromSettings() throws {
         let app = XCUIApplication()
+        let exerciseName = "UI Exercise \(UUID().uuidString.prefix(8))"
         app.launch()
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // XCUIAutomation Documentation
-        // https://developer.apple.com/documentation/xcuiautomation
+        app.tabBars.buttons["Settings"].tap()
+        app.staticTexts["Exercises"].tap()
+
+        XCTAssertTrue(app.navigationBars["Exercises"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.navigationBars["Exercises"].buttons["Edit"].exists)
+
+        app.navigationBars["Exercises"].buttons["Add Exercise"].tap()
+
+        XCTAssertTrue(app.navigationBars["New Exercise"].waitForExistence(timeout: 2))
+        let nameField = app.textFields["Name"]
+        XCTAssertTrue(nameField.exists)
+        nameField.tap()
+        nameField.typeText(exerciseName)
+        app.navigationBars["New Exercise"].buttons["Add"].tap()
+
+        XCTAssertTrue(app.staticTexts[exerciseName].waitForExistence(timeout: 2))
+        app.staticTexts[exerciseName].tap()
+
+        XCTAssertTrue(app.navigationBars["Edit Exercise"].waitForExistence(timeout: 2))
+        XCTAssertEqual(app.textFields["Name"].value as? String, exerciseName)
     }
 
     @MainActor

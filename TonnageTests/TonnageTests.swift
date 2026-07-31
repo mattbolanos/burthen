@@ -267,6 +267,167 @@ struct TonnageTests {
     }
   }
 
+  @Test
+  func updatingExerciseRenamesAndChangesTracking() throws {
+    let container = try makeContainer()
+    let store = TrainingDataStore(modelContext: container.mainContext)
+    let exercise = try store.createExercise(
+      name: "Goblet Squat",
+      loadMode: .externalResistance
+    )
+    let updateDate = Date(timeIntervalSince1970: 2_000)
+
+    try store.updateExercise(
+      exercise,
+      name: "  Split Squat  ",
+      loadMode: .bodyweight,
+      repetitionMode: .perSide,
+      at: updateDate
+    )
+
+    #expect(exercise.name == "Split Squat")
+    #expect(exercise.loadMode == .bodyweight)
+    #expect(exercise.repetitionMode == .perSide)
+    #expect(exercise.updatedAt == updateDate)
+  }
+
+  @Test
+  func duplicateExerciseRenameDoesNotPartiallyUpdate() throws {
+    let container = try makeContainer()
+    let store = TrainingDataStore(modelContext: container.mainContext)
+    let benchPress = try store.createExercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    _ = try store.createExercise(
+      name: "Push-up",
+      loadMode: .bodyweight
+    )
+
+    #expect(throws: WorkoutModelError.duplicateExerciseName) {
+      try store.updateExercise(
+        benchPress,
+        name: "push-up",
+        loadMode: .bodyweight,
+        repetitionMode: .perSide
+      )
+    }
+    #expect(benchPress.name == "Bench Press")
+    #expect(benchPress.loadMode == .externalResistance)
+    #expect(benchPress.repetitionMode == .standard)
+  }
+
+  @Test
+  func usedExerciseCanBeRenamedWithoutChangingTracking() throws {
+    let container = try makeContainer()
+    let store = TrainingDataStore(modelContext: container.mainContext)
+    let exercise = try store.createExercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let workout = try store.startWorkout()
+    let entry = try workout.addExercise(exercise)
+    try entry.addSet(reps: 8, weight: 135, weightUnit: .pounds)
+
+    #expect(throws: WorkoutModelError.exerciseClassificationInUse) {
+      try store.updateExercise(
+        exercise,
+        name: "Barbell Bench Press",
+        loadMode: .bodyweight,
+        repetitionMode: .standard
+      )
+    }
+    #expect(exercise.name == "Bench Press")
+
+    try store.updateExercise(
+      exercise,
+      name: "Barbell Bench Press",
+      loadMode: .externalResistance,
+      repetitionMode: .standard
+    )
+    #expect(exercise.name == "Barbell Bench Press")
+  }
+
+  @Test
+  func explicitlyArchivingUnusedExerciseDoesNotDeleteIt() throws {
+    let container = try makeContainer()
+    let context = container.mainContext
+    let store = TrainingDataStore(modelContext: context)
+    let exercise = try store.createExercise(
+      name: "Cable Fly",
+      loadMode: .externalResistance
+    )
+    try context.save()
+
+    try store.archive(exercise)
+    try context.save()
+
+    #expect(exercise.isArchived)
+    #expect(try context.fetchCount(FetchDescriptor<Exercise>()) == 1)
+  }
+
+  @Test
+  func removingUsedExerciseArchivesWithoutDeletingHistory() throws {
+    let container = try makeContainer()
+    let context = container.mainContext
+    let store = TrainingDataStore(modelContext: context)
+    let exercise = try store.createExercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let workout = try store.startWorkout()
+    let workoutEntry = try workout.addExercise(exercise)
+    try workoutEntry.addSet(reps: 8, weight: 135, weightUnit: .pounds)
+    try context.save()
+
+    try store.remove(exercise)
+    try context.save()
+
+    #expect(exercise.isArchived)
+    #expect(try context.fetchCount(FetchDescriptor<Exercise>()) == 1)
+    #expect(try context.fetchCount(FetchDescriptor<WorkoutExercise>()) == 1)
+    #expect(try context.fetchCount(FetchDescriptor<ExerciseSet>()) == 1)
+  }
+
+  @Test
+  func deletingUsedExerciseRequiresExplicitAssociatedDataRemoval() throws {
+    let container = try makeContainer()
+    let context = container.mainContext
+    let store = TrainingDataStore(modelContext: context)
+    let exercise = try store.createExercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let workout = try store.startWorkout()
+    let workoutEntry = try workout.addExercise(exercise)
+    try workoutEntry.addSet(reps: 8, weight: 135, weightUnit: .pounds)
+    let template = try store.createTemplate(name: "Push Day")
+    try template.addExercise(exercise, plannedWorkingSetCount: 3)
+    try context.save()
+
+    #expect(
+      store.deletionImpact(for: exercise)
+        == ExerciseDeletionImpact(
+          workoutEntryCount: 1,
+          setCount: 1,
+          templateEntryCount: 1
+        )
+    )
+    #expect(throws: WorkoutModelError.exerciseHasAssociatedData) {
+      try store.delete(exercise)
+    }
+
+    try store.delete(exercise, includingAssociatedData: true)
+    try context.save()
+
+    #expect(try context.fetchCount(FetchDescriptor<Exercise>()) == 0)
+    #expect(try context.fetchCount(FetchDescriptor<WorkoutExercise>()) == 0)
+    #expect(try context.fetchCount(FetchDescriptor<ExerciseSet>()) == 0)
+    #expect(try context.fetchCount(FetchDescriptor<TemplateExercise>()) == 0)
+    #expect(try context.fetchCount(FetchDescriptor<Workout>()) == 1)
+    #expect(try context.fetchCount(FetchDescriptor<WorkoutTemplate>()) == 1)
+  }
+
   private func makeContainer() throws -> ModelContainer {
     let configuration = ModelConfiguration(
       schema: TonnageSchema.schema,

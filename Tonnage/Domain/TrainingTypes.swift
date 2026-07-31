@@ -66,6 +66,7 @@ enum WorkoutModelError: Error, Equatable {
   case duplicateTemplateName
   case emptyName
   case endBeforeStart
+  case exerciseHasAssociatedData
   case exerciseClassificationInUse
   case exerciseIsArchived
   case invalidPlannedSetCount

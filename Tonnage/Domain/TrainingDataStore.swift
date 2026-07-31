@@ -7,6 +7,16 @@
 import Foundation
 import SwiftData
 
+struct ExerciseDeletionImpact: Equatable {
+  let workoutEntryCount: Int
+  let setCount: Int
+  let templateEntryCount: Int
+
+  var hasAssociatedData: Bool {
+    workoutEntryCount > 0 || setCount > 0 || templateEntryCount > 0
+  }
+}
+
 @MainActor
 struct TrainingDataStore {
   let modelContext: ModelContext
@@ -67,6 +77,46 @@ struct TrainingDataStore {
     return exercise
   }
 
+  func updateExercise(
+    _ exercise: Exercise,
+    name: String,
+    loadMode: ExerciseLoadMode,
+    repetitionMode: ExerciseRepetitionMode,
+    at date: Date = .now
+  ) throws {
+    guard exercise.origin == .custom else {
+      throw WorkoutModelError.seededExerciseIsReadOnly
+    }
+
+    let normalizedName = try validatedName(name)
+    let exercises = try modelContext.fetch(FetchDescriptor<Exercise>())
+    guard !exercises.contains(where: {
+      $0 !== exercise
+        && !$0.isArchived
+        && !exercise.isArchived
+        && namesMatch($0.name, normalizedName)
+    }) else {
+      throw WorkoutModelError.duplicateExerciseName
+    }
+
+    let classificationChanged = exercise.loadMode != loadMode
+      || exercise.repetitionMode != repetitionMode
+    guard !classificationChanged || !exercise.hasHistoricalSets else {
+      throw WorkoutModelError.exerciseClassificationInUse
+    }
+
+    if exercise.name != normalizedName {
+      try exercise.rename(to: normalizedName, at: date)
+    }
+    if classificationChanged {
+      try exercise.updateClassification(
+        loadMode: loadMode,
+        repetitionMode: repetitionMode,
+        at: date
+      )
+    }
+  }
+
   func createTemplate(name: String, notes: String? = nil) throws -> WorkoutTemplate {
     let normalizedName = try validatedName(name)
     let templates = try modelContext.fetch(FetchDescriptor<WorkoutTemplate>())
@@ -102,8 +152,70 @@ struct TrainingDataStore {
     if exercise.workoutExercises.isEmpty && exercise.templateExercises.isEmpty {
       modelContext.delete(exercise)
     } else {
-      try exercise.archive()
+      try archive(exercise)
     }
+  }
+
+  func archive(_ exercise: Exercise) throws {
+    guard exercise.origin == .custom else {
+      throw WorkoutModelError.seededExerciseIsReadOnly
+    }
+
+    try exercise.archive()
+  }
+
+  func restore(_ exercise: Exercise) throws {
+    guard exercise.origin == .custom else {
+      throw WorkoutModelError.seededExerciseIsReadOnly
+    }
+
+    let exercises = try modelContext.fetch(FetchDescriptor<Exercise>())
+    guard !exercises.contains(where: {
+      $0 !== exercise && !$0.isArchived && namesMatch($0.name, exercise.name)
+    }) else {
+      throw WorkoutModelError.duplicateExerciseName
+    }
+
+    exercise.restore()
+  }
+
+  func deletionImpact(for exercise: Exercise) -> ExerciseDeletionImpact {
+    ExerciseDeletionImpact(
+      workoutEntryCount: exercise.workoutExercises.count,
+      setCount: exercise.workoutExercises.reduce(0) { count, workoutExercise in
+        count + workoutExercise.exerciseSets.count
+      },
+      templateEntryCount: exercise.templateExercises.count
+    )
+  }
+
+  func delete(
+    _ exercise: Exercise,
+    includingAssociatedData: Bool = false
+  ) throws {
+    guard exercise.origin == .custom else {
+      throw WorkoutModelError.seededExerciseIsReadOnly
+    }
+
+    let impact = deletionImpact(for: exercise)
+    guard includingAssociatedData || !impact.hasAssociatedData else {
+      throw WorkoutModelError.exerciseHasAssociatedData
+    }
+
+    let workoutEntries = exercise.workoutExercises
+    let templateEntries = exercise.templateExercises
+
+    exercise.workoutExercises.removeAll()
+    exercise.templateExercises.removeAll()
+
+    for workoutEntry in workoutEntries {
+      modelContext.delete(workoutEntry)
+    }
+    for templateEntry in templateEntries {
+      modelContext.delete(templateEntry)
+    }
+
+    modelContext.delete(exercise)
   }
 
   private func ensureNoActiveWorkout() throws {

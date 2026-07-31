@@ -3,15 +3,20 @@
 //  Tonnage
 //
 
+import SwiftData
 import SwiftUI
 
 struct SettingsView: View {
   var body: some View {
     NavigationStack {
-      ContentUnavailableView {
-        Label("Settings", systemImage: "gearshape")
-      } description: {
-        Text("App preferences will appear here.")
+      Form {
+        Section("Training") {
+          NavigationLink {
+            ExerciseManagementView()
+          } label: {
+            Label("Exercises", systemImage: "dumbbell")
+          }
+        }
       }
       .navigationTitle("Settings")
     }
@@ -20,4 +25,5 @@ struct SettingsView: View {
 
 #Preview {
   SettingsView()
+    .modelContainer(for: TonnageSchema.models, inMemory: true)
 }
