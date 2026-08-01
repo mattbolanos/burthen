@@ -5,8 +5,8 @@
 //  Created by Matt Bolaños on 7/25/26.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct ContentView: View {
   @Query(sort: \Workout.startedAt, order: .reverse)
@@ -23,17 +23,21 @@ struct ContentView: View {
       if let activeWorkout {
         Tab("Workout", systemImage: "dumbbell.fill", value: AppTab.activeWorkout) {
           ActiveWorkoutView(workout: activeWorkout)
+            .tint(nil)
         }
       }
 
       Tab("Home", systemImage: "house", value: AppTab.home) {
         HomeView()
+          .tint(nil)
       }
 
       Tab("Settings", systemImage: "gearshape", value: AppTab.settings) {
         SettingsView()
+          .tint(nil)
       }
     }
+    .tint(.pink)
     .onChange(
       of: activeWorkout?.id,
       initial: true,
@@ -60,9 +64,7 @@ private struct HomeView: View {
   var body: some View {
     NavigationStack {
       ContentUnavailableView {
-        Label("No Workouts Yet", systemImage: "dumbbell")
-      } description: {
-        Text("Add a workout to get started.")
+        Label("Home Page", systemImage: "house")
       }
       .navigationTitle("Workouts")
       .toolbar {
