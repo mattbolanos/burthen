@@ -62,6 +62,7 @@ struct VolumeLoad: Equatable {
 
 enum WorkoutModelError: Error, Equatable {
   case activeWorkoutExists
+  case cannotRemoveLastSet
   case duplicateExerciseName
   case duplicateExerciseInTemplate
   case duplicateTemplateName

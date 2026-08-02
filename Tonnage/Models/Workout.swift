@@ -98,6 +98,35 @@ final class Workout {
     return workoutExercise
   }
 
+  func removeExercise(
+    _ workoutExercise: WorkoutExercise,
+    at date: Date = .now
+  ) {
+    guard workoutExercise.workout === self else { return }
+
+    workoutExercises.removeAll { $0 === workoutExercise }
+    workoutExercise.workout = nil
+    normalizeExercisePositions()
+    updatedAt = date
+  }
+
+  func updateExerciseOrder(
+    _ orderedExercises: [WorkoutExercise],
+    at date: Date = .now
+  ) {
+    let currentIDs = Set(workoutExercises.map(\.id))
+    let proposedIDs = Set(orderedExercises.map(\.id))
+    guard
+      orderedExercises.count == workoutExercises.count,
+      proposedIDs == currentIDs
+    else { return }
+
+    for (position, workoutExercise) in orderedExercises.enumerated() {
+      workoutExercise.position = position
+    }
+    updatedAt = date
+  }
+
   func complete(at endDate: Date? = .now) throws {
     guard status == .inProgress else { throw WorkoutModelError.workoutAlreadyCompleted }
     guard isCompletable else { throw WorkoutModelError.workoutHasNoSets }
@@ -169,6 +198,12 @@ final class Workout {
 
   private var nextExercisePosition: Int {
     (workoutExercises.map(\.position).max() ?? -1) + 1
+  }
+
+  private func normalizeExercisePositions() {
+    for (position, workoutExercise) in orderedExercises.enumerated() {
+      workoutExercise.position = position
+    }
   }
 }
 

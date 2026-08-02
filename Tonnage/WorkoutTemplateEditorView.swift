@@ -165,8 +165,6 @@ private struct WorkoutTemplateForm: View {
         } else if draft.hasUnavailableExercises {
           Text("Remove archived exercises before saving this template.")
             .foregroundStyle(.orange)
-        } else {
-          Text("Use Edit to reorder exercises. Swipe an exercise to remove it.")
         }
       }
     }

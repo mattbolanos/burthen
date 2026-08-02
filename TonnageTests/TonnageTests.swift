@@ -561,6 +561,127 @@ struct TonnageTests {
     #expect(try context.fetchCount(FetchDescriptor<WorkoutTemplate>()) == 1)
   }
 
+  @Test
+  func preparingAWorkoutCreatesItsPlannedDraftSets() throws {
+    let container = try makeContainer()
+    let context = container.mainContext
+    let store = TrainingDataStore(modelContext: context)
+    let benchPress = try store.createExercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let workout = try store.startWorkout()
+    let entry = try workout.addExercise(
+      benchPress,
+      plannedWorkingSetCount: 3
+    )
+
+    try store.prepareForEditing(workout)
+    try context.save()
+
+    #expect(entry.orderedSets.count == 3)
+    #expect(entry.orderedSets.map(\.position) == [0, 1, 2])
+    #expect(entry.orderedSets.allSatisfy { $0.completedAt == nil })
+  }
+
+  @Test
+  func addingAnExerciseToAnActiveWorkoutCreatesThreeWorkingSets() throws {
+    let container = try makeContainer()
+    let store = TrainingDataStore(modelContext: container.mainContext)
+    let benchPress = try store.createExercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let workout = try store.startWorkout()
+
+    let entry = try store.addExercise(benchPress, to: workout)
+
+    #expect(entry.plannedWorkingSetCount == 3)
+    #expect(entry.orderedSets.count == 3)
+    #expect(entry.orderedSets.map(\.position) == [0, 1, 2])
+    #expect(entry.orderedSets.allSatisfy { $0.kind == .working })
+    #expect(entry.orderedSets.allSatisfy { $0.completedAt == nil })
+  }
+
+  @Test
+  func changingAnActiveExerciseWeightUnitConvertsItsWeightedSets() throws {
+    let benchPress = try Exercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let workout = try Workout()
+    let entry = try workout.addExercise(benchPress)
+    let emptySet = try entry.addDraftSet()
+    let firstSet = try entry.addSet(
+      reps: 8,
+      weight: 100,
+      weightUnit: .pounds
+    )
+    let secondSet = try entry.addSet(
+      reps: 8,
+      weight: 50,
+      weightUnit: .pounds
+    )
+
+    entry.updateWeightUnit(to: .kilograms)
+
+    #expect(entry.weightUnit == .kilograms)
+    #expect(firstSet.weight == Decimal(string: "45.5"))
+    #expect(secondSet.weight == Decimal(string: "22.5"))
+    #expect(firstSet.weightUnit == .kilograms)
+    #expect(secondSet.weightUnit == .kilograms)
+    #expect(emptySet.weight == nil)
+    #expect(emptySet.weightUnit == nil)
+  }
+
+  @Test
+  func activeWorkoutAllowsDuplicateExercisesAndNormalizesReordering() throws {
+    let container = try makeContainer()
+    let store = TrainingDataStore(modelContext: container.mainContext)
+    let benchPress = try store.createExercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let squat = try store.createExercise(
+      name: "Squat",
+      loadMode: .externalResistance
+    )
+    let workout = try store.startWorkout()
+    let firstBench = try store.addExercise(benchPress, to: workout)
+    let squatEntry = try store.addExercise(squat, to: workout)
+    let secondBench = try store.addExercise(benchPress, to: workout)
+
+    try store.reorderExercises(
+      in: workout,
+      to: [secondBench, firstBench, squatEntry]
+    )
+
+    #expect(
+      workout.orderedExercises.map(\.id)
+        == [secondBench.id, firstBench.id, squatEntry.id]
+    )
+    #expect(workout.orderedExercises.map(\.position) == [0, 1, 2])
+  }
+
+  @Test
+  func anExerciseAlwaysKeepsAtLeastOneSet() throws {
+    let pushUp = try Exercise(name: "Push-up", loadMode: .bodyweight)
+    let workout = try Workout()
+    let entry = try workout.addExercise(pushUp)
+    let firstSet = try entry.addDraftSet()
+
+    #expect(throws: WorkoutModelError.cannotRemoveLastSet) {
+      try entry.removeSet(firstSet)
+    }
+
+    let secondSet = try entry.addDraftSet()
+    try entry.removeSet(firstSet)
+
+    #expect(entry.orderedSets.count == 1)
+    #expect(entry.orderedSets.first === secondSet)
+    #expect(entry.orderedSets.first?.position == 0)
+  }
+
   private func makeContainer() throws -> ModelContainer {
     let configuration = ModelConfiguration(
       schema: TonnageSchema.schema,

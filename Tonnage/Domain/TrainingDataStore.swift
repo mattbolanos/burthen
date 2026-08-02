@@ -19,6 +19,8 @@ struct ExerciseDeletionImpact: Equatable {
 
 @MainActor
 struct TrainingDataStore {
+  private static let defaultWorkingSetCount = 3
+
   let modelContext: ModelContext
 
   func startWorkout(
@@ -186,6 +188,96 @@ struct TrainingDataStore {
     modelContext.delete(workout)
   }
 
+  func prepareForEditing(_ workout: Workout) throws {
+    try requireInProgress(workout)
+
+    for workoutExercise in workout.orderedExercises
+    where workoutExercise.exerciseSets.isEmpty {
+      let setCount = max(
+        workoutExercise.plannedWorkingSetCount ?? Self.defaultWorkingSetCount,
+        1
+      )
+      for _ in 0..<setCount {
+        let exerciseSet = try workoutExercise.addDraftSet()
+        modelContext.insert(exerciseSet)
+      }
+    }
+  }
+
+  @discardableResult
+  func addExercise(
+    _ exercise: Exercise,
+    to workout: Workout,
+    at date: Date = .now
+  ) throws -> WorkoutExercise {
+    try requireInProgress(workout)
+
+    let workoutExercise = try workout.addExercise(
+      exercise,
+      plannedWorkingSetCount: Self.defaultWorkingSetCount,
+      at: date
+    )
+    modelContext.insert(workoutExercise)
+    for _ in 0..<Self.defaultWorkingSetCount {
+      let exerciseSet = try workoutExercise.addDraftSet()
+      modelContext.insert(exerciseSet)
+    }
+    return workoutExercise
+  }
+
+  @discardableResult
+  func addSet(
+    to workoutExercise: WorkoutExercise,
+    at date: Date = .now
+  ) throws -> ExerciseSet {
+    let workout = try activeWorkout(for: workoutExercise)
+    let exerciseSet = try workoutExercise.addDraftSet()
+    modelContext.insert(exerciseSet)
+    workout.updatedAt = date
+    return exerciseSet
+  }
+
+  func remove(
+    _ exerciseSet: ExerciseSet,
+    from workoutExercise: WorkoutExercise,
+    at date: Date = .now
+  ) throws {
+    let workout = try activeWorkout(for: workoutExercise)
+    try workoutExercise.removeSet(exerciseSet)
+    modelContext.delete(exerciseSet)
+    workout.updatedAt = date
+  }
+
+  func updateWeightUnit(
+    for workoutExercise: WorkoutExercise,
+    to weightUnit: WeightUnit,
+    at date: Date = .now
+  ) throws {
+    let workout = try activeWorkout(for: workoutExercise)
+    guard workoutExercise.requiresWeightUnitUpdate(to: weightUnit) else { return }
+    workoutExercise.updateWeightUnit(to: weightUnit)
+    workout.updatedAt = date
+  }
+
+  func remove(
+    _ workoutExercise: WorkoutExercise,
+    from workout: Workout,
+    at date: Date = .now
+  ) throws {
+    try requireInProgress(workout)
+    workout.removeExercise(workoutExercise, at: date)
+    modelContext.delete(workoutExercise)
+  }
+
+  func reorderExercises(
+    in workout: Workout,
+    to orderedExercises: [WorkoutExercise],
+    at date: Date = .now
+  ) throws {
+    try requireInProgress(workout)
+    workout.updateExerciseOrder(orderedExercises, at: date)
+  }
+
   func remove(_ template: WorkoutTemplate) {
     if template.canBePermanentlyDeleted {
       modelContext.delete(template)
@@ -273,6 +365,20 @@ struct TrainingDataStore {
     guard !workouts.contains(where: { $0.status == .inProgress }) else {
       throw WorkoutModelError.activeWorkoutExists
     }
+  }
+
+  private func requireInProgress(_ workout: Workout) throws {
+    guard workout.status == .inProgress else {
+      throw WorkoutModelError.workoutIsNotInProgress
+    }
+  }
+
+  private func activeWorkout(for workoutExercise: WorkoutExercise) throws -> Workout {
+    guard let workout = workoutExercise.workout else {
+      throw WorkoutModelError.missingExercise
+    }
+    try requireInProgress(workout)
+    return workout
   }
 
   private func validate(_ exercises: [TemplateExercisePlan]) throws {
