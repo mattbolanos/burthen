@@ -3,74 +3,97 @@
 //  Tonnage
 //
 
-import SwiftData
 import SwiftUI
 
 struct ExerciseSetEditorRow: View {
-  @Bindable var exerciseSet: ExerciseSet
-
+  let exerciseSet: ExerciseSet
   let setNumber: Int
   let weightUnit: WeightUnit
+  let requiresWeight: Bool
   let canDelete: Bool
   let edit: (ExerciseSet) -> Void
   let remove: (ExerciseSet) -> Void
 
-  @ScaledMetric(relativeTo: .body) private var fieldHeight = 44.0
-
   var body: some View {
-    HStack(spacing: 8) {
-      Menu {
-        Button("Working Set", action: selectWorkingSet)
-        Button("Warm-up Set", action: selectWarmupSet)
-      } label: {
-        Text("\(setNumber)")
-          .font(.body.weight(.semibold))
+    Button(action: editSet) {
+      HStack(spacing: 12) {
+        Text(setNumber, format: .number)
+          .font(.subheadline.weight(.semibold))
           .monospacedDigit()
-          .foregroundStyle(
-            exerciseSet.kind == .warmup ? Color.orange : Color.primary
-          )
-          .frame(width: 44, height: fieldHeight)
-          .background(.quaternary, in: .rect(cornerRadius: 10))
-      }
-      .accessibilityLabel("Set \(setNumber)")
-      .accessibilityValue(
-        exerciseSet.kind == .warmup ? "Warm-up set" : "Working set"
-      )
+          .foregroundStyle(.tint)
+          .frame(width: 24)
 
-      Button(action: editSet) {
-        HStack(spacing: 8) {
-          Text(exerciseSet.reps, format: .number)
-            .frame(maxWidth: .infinity, minHeight: fieldHeight)
-            .background(.quaternary, in: .rect(cornerRadius: 10))
+        VStack(alignment: .leading, spacing: 2) {
+          setSummary
+            .font(.headline)
+            .monospacedDigit()
+            .foregroundStyle(.primary)
 
-          Text(
-            exerciseSet.weight ?? .zero,
-            format: .number.precision(.fractionLength(0...1))
-          )
-          .frame(maxWidth: .infinity, minHeight: fieldHeight)
-          .background(.quaternary, in: .rect(cornerRadius: 10))
-
-          Image(systemName: "chevron.up.chevron.down")
-            .font(.caption)
-            .foregroundStyle(.tertiary)
-            .frame(width: 14)
-            .accessibilityHidden(true)
+          Text(setKindSummary)
+            .font(.subheadline)
+            .foregroundStyle(
+              exerciseSet.kind == .warmup ? Color.orange : Color.secondary
+            )
         }
-        .monospacedDigit()
-        .contentShape(.rect)
+
+        Spacer(minLength: 8)
+
+        Image(systemName: "chevron.forward")
+          .font(.caption.weight(.semibold))
+          .foregroundStyle(.tertiary)
+          .accessibilityHidden(true)
       }
-      .buttonStyle(.plain)
-      .accessibilityLabel("Edit set \(setNumber)")
-      .accessibilityValue(
-        "\(exerciseSet.reps) repetitions, \(exerciseSet.weight ?? .zero, format: .number.precision(.fractionLength(0...1))) \(weightUnit.rawValue)"
-      )
-      .accessibilityInputLabels(["Edit Set \(setNumber)", "Set \(setNumber)"])
+      .padding(.vertical, 2)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .contentShape(.rect)
     }
+    .buttonStyle(.plain)
+    .accessibilityLabel("Set \(setNumber)")
+    .accessibilityValue(accessibilityValue)
+    .accessibilityHint("Opens the set editor")
+    .accessibilityInputLabels(["Edit Set \(setNumber)", "Set \(setNumber)"])
     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
       if canDelete {
         Button("Delete Set", systemImage: "trash", role: .destructive, action: removeSet)
       }
     }
+  }
+
+  private var setSummary: Text {
+    guard requiresWeight || exerciseSet.weight != nil else {
+      return Text("\(exerciseSet.reps) reps")
+    }
+
+    guard let weight = exerciseSet.weight else {
+      return Text("\(exerciseSet.reps) × — \(weightUnit.displayAbbreviation)")
+    }
+
+    return Text(
+      "\(exerciseSet.reps) × \(weight, format: .number.precision(.fractionLength(0...1))) \(weightUnit.displayAbbreviation)"
+    )
+  }
+
+  private var setKindSummary: String {
+    switch exerciseSet.kind {
+    case .working: "Working"
+    case .warmup: "Warm-up"
+    }
+  }
+
+  private var accessibilityValue: String {
+    let type = exerciseSet.kind == .warmup
+      ? "Warm-up set, excluded from workout load"
+      : "Working set, counts toward workout load"
+
+    guard requiresWeight || exerciseSet.weight != nil else {
+      return "\(type), \(exerciseSet.reps) repetitions"
+    }
+
+    guard let weight = exerciseSet.weight else {
+      return "\(type), \(exerciseSet.reps) repetitions, no weight"
+    }
+
+    return "\(type), \(exerciseSet.reps) repetitions, \(weight) \(weightUnit.spokenName)"
   }
 
   private func editSet() {
@@ -79,19 +102,5 @@ struct ExerciseSetEditorRow: View {
 
   private func removeSet() {
     remove(exerciseSet)
-  }
-
-  private func selectWorkingSet() {
-    exerciseSet.kind = .working
-    markWorkoutUpdated()
-  }
-
-  private func selectWarmupSet() {
-    exerciseSet.kind = .warmup
-    markWorkoutUpdated()
-  }
-
-  private func markWorkoutUpdated() {
-    exerciseSet.workoutExercise?.workout?.updatedAt = .now
   }
 }

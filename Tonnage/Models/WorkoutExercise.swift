@@ -98,7 +98,7 @@ final class WorkoutExercise {
     }
     let exerciseSet = ExerciseSet(
       position: nextSetPosition,
-      kind: previousSet?.kind ?? .working,
+      kind: .working,
       reps: max(previousSet?.reps ?? 1, 1),
       weight: previousWeight,
       weightUnit: previousWeight == nil ? nil : weightUnit,

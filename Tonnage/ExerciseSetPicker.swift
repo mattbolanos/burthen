@@ -17,6 +17,7 @@ struct ExerciseSetPicker: View {
   let setNumber: Int
   let weightUnit: WeightUnit
 
+  @State private var kind: ExerciseSetKind
   @State private var repetitions: Int
   @State private var wholeWeight: Int
   @State private var usesHalfWeight: Bool
@@ -40,6 +41,7 @@ struct ExerciseSetPicker: View {
       Self.wholeWeightRange.upperBound * 2
     )
 
+    _kind = State(initialValue: exerciseSet.kind)
     _repetitions = State(
       initialValue: min(max(exerciseSet.reps, 1), Self.repetitionRange.upperBound)
     )
@@ -50,6 +52,21 @@ struct ExerciseSetPicker: View {
   var body: some View {
     NavigationStack {
       VStack(spacing: 12) {
+        VStack(spacing: 8) {
+          Picker("Set Type", selection: $kind) {
+            Text("Working")
+              .tag(ExerciseSetKind.working)
+            Text("Warm-up")
+              .tag(ExerciseSetKind.warmup)
+          }
+          .pickerStyle(.segmented)
+
+          Label(setTypeDescription, systemImage: setTypeSymbol)
+            .font(.footnote)
+            .foregroundStyle(kind == .warmup ? Color.orange : Color.secondary)
+        }
+        .padding(.bottom, 4)
+
         HStack(spacing: 16) {
           ZStack {
             Picker("Repetitions", selection: $repetitions) {
@@ -99,7 +116,7 @@ struct ExerciseSetPicker: View {
                         .hidden()
                     }
                   }
-                  Text(weightUnit.rawValue)
+                  Text(weightUnit.displayAbbreviation)
                     .hidden()
                 }
                 .fixedSize(horizontal: true, vertical: false)
@@ -118,7 +135,7 @@ struct ExerciseSetPicker: View {
                   Text(".5")
                 }
               }
-              Text(weightUnit.rawValue)
+              Text(weightUnit.displayAbbreviation)
             }
             .fixedSize(horizontal: true, vertical: false)
             .allowsHitTesting(false)
@@ -134,7 +151,7 @@ struct ExerciseSetPicker: View {
             .frame(maxWidth: .infinity, maxHeight: 0)
 
           Toggle(isOn: $usesHalfWeight) {
-            Text("+ ½ \(weightUnit.rawValue)")
+            Text("+ ½ \(weightUnit.displayAbbreviation)")
               .frame(maxWidth: .infinity)
           }
           .toggleStyle(.button)
@@ -160,14 +177,28 @@ struct ExerciseSetPicker: View {
         Text(errorMessage)
       }
     }
-    .presentationDetents([.medium])
+    .presentationDetents([.medium, .large])
     .presentationDragIndicator(.visible)
   }
 
   private var weightAccessibilityValue: String {
     let halfSteps = wholeWeight * 2 + (usesHalfWeight ? 1 : 0)
     let weight = Decimal(halfSteps) / 2
-    return "\(weight) \(weightUnit.rawValue)"
+    return "\(weight) \(weightUnit.spokenName)"
+  }
+
+  private var setTypeDescription: String {
+    switch kind {
+    case .working: "Counts toward workout load"
+    case .warmup: "Excluded from workout load"
+    }
+  }
+
+  private var setTypeSymbol: String {
+    switch kind {
+    case .working: "checkmark.circle.fill"
+    case .warmup: "flame.fill"
+    }
   }
 
   private func enforceWeightLimit() {
@@ -179,6 +210,7 @@ struct ExerciseSetPicker: View {
   private func save() {
     let halfSteps = wholeWeight * 2 + (usesHalfWeight ? 1 : 0)
 
+    exerciseSet.kind = kind
     exerciseSet.reps = repetitions
     exerciseSet.weight = halfSteps == 0 ? nil : Decimal(halfSteps) / 2
     exerciseSet.weightUnit = halfSteps == 0 ? nil : weightUnit

@@ -25,6 +25,10 @@ struct ActiveWorkoutExerciseView: View {
     workoutExercise.exercise?.name ?? "Unavailable Exercise"
   }
 
+  private var requiresWeight: Bool {
+    workoutExercise.exercise?.loadMode == .externalResistance
+  }
+
   var body: some View {
     let orderedSets = workoutExercise.orderedSets
 
@@ -32,23 +36,27 @@ struct ActiveWorkoutExerciseView: View {
       Section("Weight Unit") {
         Picker("Weight Unit", selection: $weightUnit) {
           ForEach(WeightUnit.allCases, id: \.self) { unit in
-            Text(unit.rawValue)
+            Text(unit.displayAbbreviation)
               .tag(unit)
           }
         }
         .pickerStyle(.segmented)
         .labelsHidden()
+        .listRowInsets(EdgeInsets())
+        .listRowBackground(Color.clear)
         .onChange(of: weightUnit, updateWeightUnit)
       }
 
       Section {
-        ExerciseSetColumnLabels()
-
-        ForEach(orderedSets.enumerated(), id: \.element.id) { index, exerciseSet in
+        ForEach(
+          Array(orderedSets.enumerated()),
+          id: \.element.id
+        ) { index, exerciseSet in
           ExerciseSetEditorRow(
             exerciseSet: exerciseSet,
             setNumber: index + 1,
             weightUnit: weightUnit,
+            requiresWeight: requiresWeight,
             canDelete: orderedSets.count > 1,
             edit: editSet,
             remove: removeSet
@@ -59,7 +67,7 @@ struct ActiveWorkoutExerciseView: View {
       } header: {
         Text("Sets")
       } footer: {
-        Text("Tap a row to edit reps and weight. Tap a set number to change its type.")
+        Text("Working sets count toward workout load; warm-ups don’t.")
       }
     }
     .navigationTitle(exerciseName)

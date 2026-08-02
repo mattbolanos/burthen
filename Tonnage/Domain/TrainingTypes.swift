@@ -32,8 +32,23 @@ enum ExerciseSetKind: String, Codable, CaseIterable {
 }
 
 enum WeightUnit: String, Codable, CaseIterable {
+  // Keep these raw values stable for persisted data; UI copy lives below.
   case pounds = "lb"
   case kilograms = "kg"
+
+  var displayAbbreviation: String {
+    switch self {
+    case .pounds: "lbs"
+    case .kilograms: "kgs"
+    }
+  }
+
+  var spokenName: String {
+    switch self {
+    case .pounds: "pounds"
+    case .kilograms: "kilograms"
+    }
+  }
 
   func convert(_ value: Decimal, to targetUnit: WeightUnit) -> Decimal {
     guard self != targetUnit else { return value }

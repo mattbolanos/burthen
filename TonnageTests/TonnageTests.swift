@@ -68,6 +68,26 @@ struct TonnageTests {
   }
 
   @Test
+  func warmupSetsNeverContributeToVolumeLoad() throws {
+    let benchPress = try Exercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let workout = try Workout()
+    let entry = try workout.addExercise(benchPress)
+    let warmup = try entry.addSet(
+      kind: .warmup,
+      reps: 10,
+      weight: 45,
+      weightUnit: .pounds
+    )
+
+    #expect(warmup.volumeLoad == nil)
+    #expect(entry.volumeLoad(in: .pounds) == nil)
+    #expect(workout.volumeLoad(in: .pounds) == nil)
+  }
+
+  @Test
   func bodyweightOnlyWorkoutHasNoVolumeLoad() throws {
     let pushUp = try Exercise(name: "Push-up", loadMode: .bodyweight)
     let workout = try Workout()
@@ -601,6 +621,22 @@ struct TonnageTests {
     #expect(entry.orderedSets.map(\.position) == [0, 1, 2])
     #expect(entry.orderedSets.allSatisfy { $0.kind == .working })
     #expect(entry.orderedSets.allSatisfy { $0.completedAt == nil })
+  }
+
+  @Test
+  func addingADraftSetDefaultsToWorkingAfterAWarmupSet() throws {
+    let benchPress = try Exercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let workout = try Workout()
+    let entry = try workout.addExercise(benchPress)
+    let warmup = try entry.addDraftSet()
+    warmup.kind = .warmup
+
+    let newSet = try entry.addDraftSet()
+
+    #expect(newSet.kind == .working)
   }
 
   @Test
