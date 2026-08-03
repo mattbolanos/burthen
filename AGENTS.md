@@ -1,1 +1,3 @@
 don't execute xcode build or run commands unless asked to. the minimum ios deployment target here is 26.0, so no need for #available statements. always prefer native SwiftUI components.
+
+For list deletion and reordering, use native `ForEach.onDelete`, `ForEach.onMove`, and `EditButton` behavior consistently. Every trailing delete swipe action must use `allowsFullSwipe: false` and an icon-only `Label` with the `trash` system image and destructive role; keep a concise, specific title such as “Delete Set” for accessibility, but do not show that text visually. Preserve domain-specific deletion guards with `deleteDisabled` where needed.

@@ -7,8 +7,8 @@ import SwiftData
 import SwiftUI
 
 struct ExerciseSetPicker: View {
-  private static let repetitionRange = 1...99
-  private static let wholeWeightRange = 0...499
+  private static let repetitionRange = 1...49
+  private static let wholeWeightRange = 0...399
 
   @Environment(\.dismiss) private var dismiss
   @Environment(\.modelContext) private var modelContext

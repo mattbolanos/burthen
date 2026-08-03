@@ -52,9 +52,10 @@ struct ExerciseSetEditorRow: View {
     .accessibilityValue(accessibilityValue)
     .accessibilityHint("Opens the set editor")
     .accessibilityInputLabels(["Edit Set \(setNumber)", "Set \(setNumber)"])
-    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
       if canDelete {
         Button("Delete Set", systemImage: "trash", role: .destructive, action: removeSet)
+          .labelStyle(.iconOnly)
       }
     }
   }

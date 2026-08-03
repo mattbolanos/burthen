@@ -41,6 +41,16 @@ private struct ActiveWorkoutEditor: View {
             )
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+              Button(
+                "Delete Exercise",
+                systemImage: "trash",
+                role: .destructive
+              ) {
+                removeExercise(workoutExercise)
+              }
+              .labelStyle(.iconOnly)
+            }
         }
         .onDelete(perform: removeExercises)
         .onMove(perform: moveExercises)
@@ -100,6 +110,15 @@ private struct ActiveWorkoutEditor: View {
       for exercise in exercises {
         try store.remove(exercise, from: workout)
       }
+    }
+  }
+
+  private func removeExercise(_ workoutExercise: WorkoutExercise) {
+    performUpdate {
+      try TrainingDataStore(modelContext: modelContext).remove(
+        workoutExercise,
+        from: workout
+      )
     }
   }
 

@@ -61,7 +61,9 @@ struct ActiveWorkoutExerciseView: View {
             edit: editSet,
             remove: removeSet
           )
+          .deleteDisabled(orderedSets.count <= 1)
         }
+        .onDelete(perform: removeSets)
 
         Button("Add Set", systemImage: "plus", action: addSet)
       } header: {
@@ -72,6 +74,11 @@ struct ActiveWorkoutExerciseView: View {
     }
     .navigationTitle(exerciseName)
     .navigationBarTitleDisplayMode(.large)
+    .toolbar {
+      ToolbarItem(placement: .topBarTrailing) {
+        EditButton()
+      }
+    }
     .onAppear(perform: prepareWeightUnit)
     .sheet(item: $selectedSet) { exerciseSet in
       ExerciseSetPicker(
@@ -126,6 +133,18 @@ struct ActiveWorkoutExerciseView: View {
         exerciseSet,
         from: workoutExercise
       )
+    }
+  }
+
+  private func removeSets(at offsets: IndexSet) {
+    let exerciseSets = offsets.map { workoutExercise.orderedSets[$0] }
+    guard exerciseSets.count < workoutExercise.exerciseSets.count else { return }
+
+    performUpdate {
+      let store = TrainingDataStore(modelContext: modelContext)
+      for exerciseSet in exerciseSets {
+        try store.remove(exerciseSet, from: workoutExercise)
+      }
     }
   }
 

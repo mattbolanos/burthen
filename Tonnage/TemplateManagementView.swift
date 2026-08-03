@@ -47,12 +47,13 @@ struct TemplateManagementView: View {
               .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 if template.canBePermanentlyDeleted {
                   Button(
-                    "Delete",
+                    "Delete Template",
                     systemImage: "trash",
                     role: .destructive
                   ) {
                     requestDeletion(of: template)
                   }
+                  .labelStyle(.iconOnly)
                 }
               }
           }
@@ -73,12 +74,13 @@ struct TemplateManagementView: View {
               .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 if template.canBePermanentlyDeleted {
                   Button(
-                    "Delete",
+                    "Delete Template",
                     systemImage: "trash",
                     role: .destructive
                   ) {
                     requestDeletion(of: template)
                   }
+                  .labelStyle(.iconOnly)
                 }
               }
           }
@@ -100,7 +102,8 @@ struct TemplateManagementView: View {
     }
     .navigationTitle("Workout Templates")
     .toolbar {
-      ToolbarItem(placement: .topBarTrailing) {
+      ToolbarItemGroup(placement: .topBarTrailing) {
+        EditButton()
         Button("Add Template", systemImage: "plus", action: addTemplate)
       }
     }

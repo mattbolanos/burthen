@@ -23,7 +23,8 @@ struct AddWorkoutTemplateView: View {
           ToolbarItem(placement: .cancellationAction) {
             Button("Cancel", action: dismiss.callAsFunction)
           }
-          ToolbarItemGroup(placement: .confirmationAction) {
+          ToolbarItemGroup(placement: .topBarTrailing) {
+            EditButton()
             Button("Add", action: save)
               .disabled(!draft.isValid)
           }
@@ -81,7 +82,6 @@ struct EditWorkoutTemplateView: View {
     .toolbar {
       ToolbarItemGroup(placement: .topBarTrailing) {
         EditButton()
-          .disabled(draft.exercises.isEmpty)
         Button("Save", action: save)
           .disabled(!canSave)
       }
@@ -147,6 +147,16 @@ private struct WorkoutTemplateForm: View {
         if !draft.exercises.isEmpty {
           ForEach($draft.exercises) { $exercise in
             TemplateExerciseEditorRow(item: $exercise)
+              .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button(
+                  "Delete Exercise",
+                  systemImage: "trash",
+                  role: .destructive
+                ) {
+                  removeExercise(exercise)
+                }
+                .labelStyle(.iconOnly)
+              }
           }
           .onDelete(perform: removeExercises)
           .onMove(perform: moveExercises)
@@ -179,6 +189,10 @@ private struct WorkoutTemplateForm: View {
 
   private func removeExercises(at offsets: IndexSet) {
     draft.exercises.remove(atOffsets: offsets)
+  }
+
+  private func removeExercise(_ exercise: TemplateExerciseDraft) {
+    draft.exercises.removeAll { $0.id == exercise.id }
   }
 
   private func moveExercises(from offsets: IndexSet, to destination: Int) {

@@ -42,12 +42,13 @@ struct ExerciseManagementView: View {
               .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 if exercise.origin == .custom {
                   Button(
-                    "Delete",
+                    "Delete Exercise",
                     systemImage: "trash",
                     role: .destructive
                   ) {
                     requestDeletion(of: exercise)
                   }
+                  .labelStyle(.iconOnly)
                 }
               }
           }
@@ -70,12 +71,13 @@ struct ExerciseManagementView: View {
               .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 if exercise.origin == .custom {
                   Button(
-                    "Delete",
+                    "Delete Exercise",
                     systemImage: "trash",
                     role: .destructive
                   ) {
                     requestDeletion(of: exercise)
                   }
+                  .labelStyle(.iconOnly)
                 }
               }
           }
@@ -99,7 +101,6 @@ struct ExerciseManagementView: View {
     .toolbar {
       ToolbarItemGroup(placement: .topBarTrailing) {
         EditButton()
-          .disabled(!hasCustomExercises)
         Button("Add Exercise", systemImage: "plus", action: addExercise)
       }
     }
@@ -135,11 +136,6 @@ struct ExerciseManagementView: View {
 
   private func addExercise() {
     isAddingExercise = true
-  }
-
-  private var hasCustomExercises: Bool {
-    activeExercises.contains { $0.origin == .custom }
-      || archivedExercises.contains { $0.origin == .custom }
   }
 
   private func removeActiveExercises(at offsets: IndexSet) {
