@@ -28,7 +28,10 @@ struct ContentView: View {
       }
 
       Tab("Home", systemImage: "house", value: AppTab.home) {
-        HomeView()
+        HomeView(
+          workouts: workouts,
+          resumeActiveWorkout: showActiveWorkout
+        )
           .tint(nil)
       }
 
@@ -52,43 +55,17 @@ struct ContentView: View {
       selection = .home
     }
   }
+
+  private func showActiveWorkout() {
+    guard activeWorkout != nil else { return }
+    selection = .activeWorkout
+  }
 }
 
 private enum AppTab: Hashable {
   case activeWorkout
   case home
   case settings
-}
-
-private struct HomeView: View {
-  var body: some View {
-    NavigationStack {
-      ContentUnavailableView {
-        Label("Home Page", systemImage: "house")
-      }
-      .navigationTitle("Workouts")
-      .toolbar {
-        ToolbarItem(placement: .topBarTrailing) {
-          Menu("Add Workout", systemImage: "plus") {
-            NavigationLink(value: NewWorkoutRoute.blank) {
-              Label("Blank Workout", systemImage: "doc")
-            }
-            NavigationLink(value: NewWorkoutRoute.templates) {
-              Label("Choose a Template", systemImage: "rectangle.stack")
-            }
-          }
-        }
-      }
-      .navigationDestination(for: NewWorkoutRoute.self) { route in
-        switch route {
-        case .blank:
-          BlankWorkoutView()
-        case .templates:
-          WorkoutTemplatePickerView()
-        }
-      }
-    }
-  }
 }
 
 #Preview {

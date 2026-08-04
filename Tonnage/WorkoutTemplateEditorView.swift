@@ -24,7 +24,6 @@ struct AddWorkoutTemplateView: View {
             Button("Cancel", action: dismiss.callAsFunction)
           }
           ToolbarItemGroup(placement: .topBarTrailing) {
-            EditButton()
             Button("Add", action: save)
               .disabled(!draft.isValid)
           }
