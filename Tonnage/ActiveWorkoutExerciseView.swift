@@ -11,15 +11,12 @@ struct ActiveWorkoutExerciseView: View {
 
   let workoutExercise: WorkoutExercise
 
-  @State private var weightUnit: WeightUnit
+  // NavigationLink may initialize this destination while deleting its source row.
+  // Defer SwiftData reads until the destination appears so the model is still attached.
+  @State private var weightUnit = WeightUnit.pounds
   @State private var isShowingError = false
   @State private var errorMessage = ""
   @State private var selectedSet: ExerciseSet?
-
-  init(workoutExercise: WorkoutExercise) {
-    self.workoutExercise = workoutExercise
-    _weightUnit = State(initialValue: workoutExercise.weightUnit)
-  }
 
   private var exerciseName: String {
     workoutExercise.exercise?.name ?? "Unavailable Exercise"

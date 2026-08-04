@@ -204,7 +204,7 @@ private struct TemplateExerciseEditorRow: View {
   @Binding var item: TemplateExerciseDraft
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.small) {
       HStack {
         Text(item.exercise.name)
         Spacer()
@@ -303,7 +303,7 @@ private struct TemplateExerciseSelectionRow: View {
   var body: some View {
     Button(action: toggleSelection) {
       HStack {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
           Text(exercise.name)
             .foregroundStyle(.primary)
           Text(exercise.trackingSummary)

@@ -11,7 +11,7 @@ struct ActiveWorkoutView: View {
 
   var body: some View {
     NavigationStack {
-      GlassEffectContainer(spacing: 16) {
+      GlassEffectContainer(spacing: LayoutMetrics.Spacing.large) {
         ActiveWorkoutEditor(workout: workout)
       }
     }
@@ -24,6 +24,7 @@ private struct ActiveWorkoutEditor: View {
   let workout: Workout
 
   @State private var isSelectingExercise = false
+  @State private var isConfirmingWorkoutEnd = false
   @State private var isShowingError = false
   @State private var errorMessage = ""
 
@@ -36,9 +37,7 @@ private struct ActiveWorkoutEditor: View {
       } else {
         ForEach(workout.orderedExercises) { workoutExercise in
           ExerciseCard(workoutExercise: workoutExercise)
-            .listRowInsets(
-              EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
-            )
+            .listRowInsets(LayoutMetrics.Insets.cardRow)
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -54,6 +53,30 @@ private struct ActiveWorkoutEditor: View {
         }
         .onDelete(perform: removeExercises)
         .onMove(perform: moveExercises)
+      }
+
+      Button(action: requestWorkoutEnd) {
+        Text("End Workout")
+          .font(.headline)
+          .frame(maxWidth: .infinity)
+      }
+      .buttonStyle(.glass)
+      .controlSize(.large)
+      .tint(.red)
+      .listRowInsets(LayoutMetrics.Insets.finalActionRow)
+      .listRowSeparator(.hidden)
+      .listRowBackground(Color.clear)
+      .accessibilityHint("Shows options to save or discard this workout.")
+      .confirmationDialog(
+        "End Workout?",
+        isPresented: $isConfirmingWorkoutEnd,
+        titleVisibility: .visible
+      ) {
+        Button("Complete Workout", action: saveAndEndWorkout)
+        Button("Discard Workout", role: .destructive, action: discardWorkout)
+        Button("Continue Workout", role: .cancel) {}
+      } message: {
+        Text("Save your sets and workout duration, or discard this workout permanently.")
       }
     }
     .listStyle(.plain)
@@ -84,6 +107,22 @@ private struct ActiveWorkoutEditor: View {
 
   private func presentExercisePicker() {
     isSelectingExercise = true
+  }
+
+  private func requestWorkoutEnd() {
+    isConfirmingWorkoutEnd = true
+  }
+
+  private func saveAndEndWorkout() {
+    performUpdate {
+      try workout.complete()
+    }
+  }
+
+  private func discardWorkout() {
+    performUpdate {
+      try TrainingDataStore(modelContext: modelContext).discard(workout)
+    }
   }
 
   private func prepareWorkout() {
@@ -127,6 +166,7 @@ private struct ActiveWorkoutEditor: View {
       try update()
       try modelContext.save()
     } catch {
+      modelContext.rollback()
       errorMessage = activeWorkoutErrorMessage(for: error)
       isShowingError = true
     }
@@ -137,7 +177,7 @@ private struct ActiveWorkoutHeader: View {
   let workout: Workout
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
+    VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.small) {
       Text(workout.name ?? "Unplanned Workout")
         .font(.headline)
         .foregroundStyle(.secondary)
@@ -160,7 +200,7 @@ private struct ActiveWorkoutHeader: View {
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.vertical, 8)
+    .padding(.vertical, LayoutMetrics.Spacing.small)
     .listRowSeparator(.hidden)
     .listRowBackground(Color.clear)
     .accessibilityElement(children: .combine)
@@ -259,8 +299,8 @@ private struct WorkoutExercisePickerRow: View {
   let exercise: Exercise
 
   var body: some View {
-    HStack(spacing: 12) {
-      VStack(alignment: .leading, spacing: 3) {
+    HStack(spacing: LayoutMetrics.Spacing.medium) {
+      VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
         Text(exercise.name)
           .font(.body.weight(.medium))
           .foregroundStyle(.primary)
@@ -302,6 +342,18 @@ func activeWorkoutErrorMessage(for error: Error) -> String {
     "Each exercise needs at least one set."
   case .exerciseIsArchived:
     "This exercise is no longer available."
+  case .invalidReps:
+    "Enter at least one repetition for every set before saving the workout."
+  case .missingExercise:
+    "Remove unavailable exercises before saving the workout."
+  case .missingWeight:
+    "Enter a weight for every weighted set before saving the workout."
+  case .missingWeightUnit:
+    "Choose a weight unit for every weighted set before saving the workout."
+  case .workoutAlreadyCompleted:
+    "This workout has already ended."
+  case .workoutHasNoSets:
+    "Add an exercise before saving the workout, or discard it instead."
   case .workoutIsNotInProgress:
     "Only an active workout can be edited."
   default:

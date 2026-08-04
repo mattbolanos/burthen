@@ -229,7 +229,7 @@ private struct ExerciseRowView: View {
   let exercise: Exercise
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 2) {
+    VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
       Text(exercise.name)
       Text(exercise.summary)
         .font(.caption)

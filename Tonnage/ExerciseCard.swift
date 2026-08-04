@@ -21,7 +21,7 @@ struct ExerciseCard: View {
     NavigationLink {
       ActiveWorkoutExerciseView(workoutExercise: workoutExercise)
     } label: {
-      VStack(alignment: .leading, spacing: 3) {
+      VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
         Text(exerciseName)
           .font(.headline)
           .foregroundStyle(.primary)
@@ -34,8 +34,11 @@ struct ExerciseCard: View {
       .contentShape(.rect)
       .accessibilityElement(children: .combine)
     }
-    .padding(16)
+    .padding(LayoutMetrics.Padding.card)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 22))
+    .glassEffect(
+      .regular.interactive(),
+      in: .rect(cornerRadius: LayoutMetrics.CornerRadius.card)
+    )
   }
 }

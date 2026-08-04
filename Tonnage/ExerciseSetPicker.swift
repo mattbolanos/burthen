@@ -24,7 +24,8 @@ struct ExerciseSetPicker: View {
   @State private var isShowingError = false
   @State private var errorMessage = ""
 
-  @ScaledMetric(relativeTo: .title2) private var unitSpacing = 6.0
+  @ScaledMetric(relativeTo: .title2)
+  private var unitSpacing = LayoutMetrics.Spacing.small
 
   init(
     exerciseSet: ExerciseSet,
@@ -51,8 +52,8 @@ struct ExerciseSetPicker: View {
 
   var body: some View {
     NavigationStack {
-      VStack(spacing: 12) {
-        VStack(spacing: 8) {
+      VStack(spacing: LayoutMetrics.Spacing.medium) {
+        VStack(spacing: LayoutMetrics.Spacing.small) {
           Picker("Set Type", selection: $kind) {
             Text("Working")
               .tag(ExerciseSetKind.working)
@@ -65,9 +66,9 @@ struct ExerciseSetPicker: View {
             .font(.footnote)
             .foregroundStyle(kind == .warmup ? Color.orange : Color.secondary)
         }
-        .padding(.bottom, 4)
+        .padding(.bottom, LayoutMetrics.Spacing.extraSmall)
 
-        HStack(spacing: 16) {
+        HStack(spacing: LayoutMetrics.Spacing.large) {
           ZStack {
             Picker("Repetitions", selection: $repetitions) {
               ForEach(Self.repetitionRange, id: \.self) { repetition in
@@ -146,7 +147,7 @@ struct ExerciseSetPicker: View {
           .frame(maxWidth: .infinity)
         }
 
-        HStack(spacing: 16) {
+        HStack(spacing: LayoutMetrics.Spacing.large) {
           Color.clear
             .frame(maxWidth: .infinity, maxHeight: 0)
 
@@ -160,7 +161,7 @@ struct ExerciseSetPicker: View {
           .frame(maxWidth: .infinity)
         }
       }
-      .padding(.horizontal)
+      .padding(.horizontal, LayoutMetrics.Padding.horizontalContent)
       .navigationTitle("Set \(setNumber)")
       .navigationBarTitleDisplayMode(.inline)
       .onChange(of: wholeWeight, enforceWeightLimit)

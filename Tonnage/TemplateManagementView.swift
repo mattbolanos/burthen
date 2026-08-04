@@ -206,7 +206,7 @@ struct TemplateRowView: View {
   let template: WorkoutTemplate
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 2) {
+    VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
       Text(template.name)
 
       Text(template.summary)

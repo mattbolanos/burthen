@@ -16,14 +16,14 @@ struct ExerciseSetEditorRow: View {
 
   var body: some View {
     Button(action: editSet) {
-      HStack(spacing: 12) {
+      HStack(spacing: LayoutMetrics.Spacing.medium) {
         Text(setNumber, format: .number)
           .font(.subheadline.weight(.semibold))
           .monospacedDigit()
           .foregroundStyle(.tint)
-          .frame(width: 24)
+          .frame(width: LayoutMetrics.Size.setNumberColumn)
 
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
           setSummary
             .font(.headline)
             .monospacedDigit()
@@ -36,14 +36,14 @@ struct ExerciseSetEditorRow: View {
             )
         }
 
-        Spacer(minLength: 8)
+        Spacer(minLength: LayoutMetrics.Spacing.small)
 
         Image(systemName: "chevron.forward")
           .font(.caption.weight(.semibold))
           .foregroundStyle(.tertiary)
           .accessibilityHidden(true)
       }
-      .padding(.vertical, 2)
+      .padding(.vertical, LayoutMetrics.Spacing.extraSmall)
       .frame(maxWidth: .infinity, alignment: .leading)
       .contentShape(.rect)
     }
