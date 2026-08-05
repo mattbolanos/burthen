@@ -61,6 +61,24 @@ final class Workout {
     }
   }
 
+  var displayName: String {
+    name ?? defaultName()
+  }
+
+  func defaultName() -> String {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: timeZoneIdentifier) ?? .current
+
+    switch calendar.component(.hour, from: startedAt) {
+    case 0..<12:
+      return "Morning Lift"
+    case 12..<17:
+      return "Afternoon Lift"
+    default:
+      return "Evening Lift"
+    }
+  }
+
   var isCompletable: Bool {
     workoutExercises.contains { !$0.exerciseSets.isEmpty }
   }

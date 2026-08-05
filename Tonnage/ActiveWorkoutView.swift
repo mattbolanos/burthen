@@ -8,11 +8,15 @@ import SwiftUI
 
 struct ActiveWorkoutView: View {
   let workout: Workout
+  let onDiscard: () -> Void
 
   var body: some View {
     NavigationStack {
       GlassEffectContainer(spacing: LayoutMetrics.Spacing.large) {
-        ActiveWorkoutEditor(workout: workout)
+        ActiveWorkoutEditor(
+          workout: workout,
+          onDiscard: onDiscard
+        )
       }
     }
   }
@@ -22,6 +26,7 @@ private struct ActiveWorkoutEditor: View {
   @Environment(\.modelContext) private var modelContext
 
   let workout: Workout
+  let onDiscard: () -> Void
 
   @State private var isSelectingExercise = false
   @State private var isConfirmingWorkoutEnd = false
@@ -120,8 +125,12 @@ private struct ActiveWorkoutEditor: View {
   }
 
   private func discardWorkout() {
-    performUpdate {
+    let didDiscard = performUpdate {
       try TrainingDataStore(modelContext: modelContext).discard(workout)
+    }
+
+    if didDiscard {
+      onDiscard()
     }
   }
 
@@ -161,14 +170,17 @@ private struct ActiveWorkoutEditor: View {
     }
   }
 
-  private func performUpdate(_ update: () throws -> Void) {
+  @discardableResult
+  private func performUpdate(_ update: () throws -> Void) -> Bool {
     do {
       try update()
       try modelContext.save()
+      return true
     } catch {
       modelContext.rollback()
       errorMessage = activeWorkoutErrorMessage(for: error)
       isShowingError = true
+      return false
     }
   }
 }
@@ -178,7 +190,7 @@ private struct ActiveWorkoutHeader: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.small) {
-      Text(workout.name ?? "Unplanned Workout")
+      Text(workout.displayName)
         .font(.headline)
         .foregroundStyle(.secondary)
 
@@ -196,6 +208,20 @@ private struct ActiveWorkoutHeader: View {
       if let notes = workout.notes {
         Text(notes)
           .font(.subheadline)
+          .foregroundStyle(.secondary)
+      }
+
+      LabeledContent {
+        Text(
+          timerInterval: workout.startedAt...Date.distantFuture,
+          countsDown: false,
+          showsHours: true
+        )
+        .font(.title2.weight(.semibold))
+        .monospacedDigit()
+        .foregroundStyle(.primary)
+      } label: {
+        Label("Elapsed", systemImage: "timer")
           .foregroundStyle(.secondary)
       }
     }
@@ -361,7 +387,14 @@ func activeWorkoutErrorMessage(for error: Error) -> String {
   }
 }
 
-#Preview {
-  ActiveWorkoutView(workout: try! Workout(name: "Resistance Day A"))
+#Preview("Active Workout") {
+  ActiveWorkoutView(
+    workout: try! Workout(
+      name: "Push Day",
+      notes: "Chest and shoulders",
+      startedAt: .now.addingTimeInterval(-3_725)
+    ),
+    onDiscard: {}
+  )
     .modelContainer(for: TonnageSchema.models, inMemory: true)
 }

@@ -18,11 +18,24 @@ struct ContentView: View {
     workouts.first { $0.status == .inProgress }
   }
 
+  private var workoutActivityDescriptor: WorkoutActivityDescriptor? {
+    activeWorkout.map {
+      WorkoutActivityDescriptor(
+        id: $0.id,
+        name: $0.displayName,
+        startedAt: $0.startedAt
+      )
+    }
+  }
+
   var body: some View {
     TabView(selection: $selection) {
       if let activeWorkout {
         Tab("Workout", systemImage: "dumbbell.fill", value: AppTab.activeWorkout) {
-          ActiveWorkoutView(workout: activeWorkout)
+          ActiveWorkoutView(
+            workout: activeWorkout,
+            onDiscard: showHome
+          )
             .tint(nil)
         }
       }
@@ -46,6 +59,11 @@ struct ContentView: View {
       initial: true,
       activeWorkoutDidChange
     )
+    .task(id: activeWorkout?.id) {
+      await WorkoutActivityManager.synchronize(
+        with: workoutActivityDescriptor
+      )
+    }
   }
 
   private func activeWorkoutDidChange(_: UUID?, _ newID: UUID?) {
@@ -59,6 +77,10 @@ struct ContentView: View {
   private func showActiveWorkout() {
     guard activeWorkout != nil else { return }
     selection = .activeWorkout
+  }
+
+  private func showHome() {
+    selection = .home
   }
 }
 

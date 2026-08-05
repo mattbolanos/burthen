@@ -151,6 +151,71 @@ struct TonnageTests {
   }
 
   @Test
+  func unnamedWorkoutUsesStartTimeForItsDisplayName() throws {
+    let timeZone = try #require(TimeZone(identifier: "America/New_York"))
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = timeZone
+
+    func workoutStarted(at hour: Int) throws -> Workout {
+      let startedAt = try #require(
+        calendar.date(
+          from: DateComponents(year: 2026, month: 8, day: 4, hour: hour)
+        )
+      )
+      return try Workout(
+        startedAt: startedAt,
+        timeZoneIdentifier: timeZone.identifier
+      )
+    }
+
+    let morning = try workoutStarted(at: 11)
+    let afternoon = try workoutStarted(at: 12)
+    let evening = try workoutStarted(at: 17)
+    let named = try Workout(
+      name: "Push Day",
+      startedAt: morning.startedAt,
+      timeZoneIdentifier: timeZone.identifier
+    )
+
+    #expect(morning.displayName == "Morning Lift")
+    #expect(afternoon.displayName == "Afternoon Lift")
+    #expect(evening.displayName == "Evening Lift")
+    #expect(named.displayName == "Push Day")
+  }
+
+  @Test
+  func workoutActivityPayloadRoundTripsThroughCodable() throws {
+    let attributes = WorkoutActivityAttributes(
+      workoutID: UUID(uuidString: "B852A04B-E6C9-49CC-B30B-97707E452EBE")!,
+      workoutName: "Push Day",
+      startedAt: Date(timeIntervalSince1970: 1_000)
+    )
+    let state = WorkoutActivityAttributes.ContentState(isRunning: true)
+
+    #expect(attributes.elapsedTimeRange.lowerBound == attributes.startedAt)
+    #expect(
+      attributes.elapsedTimeRange.upperBound
+        == attributes.startedAt.addingTimeInterval(8 * 60 * 60)
+    )
+
+    let encodedAttributes = try JSONEncoder().encode(attributes)
+    let encodedState = try JSONEncoder().encode(state)
+
+    #expect(
+      try JSONDecoder().decode(
+        WorkoutActivityAttributes.self,
+        from: encodedAttributes
+      ) == attributes
+    )
+    #expect(
+      try JSONDecoder().decode(
+        WorkoutActivityAttributes.ContentState.self,
+        from: encodedState
+      ) == state
+    )
+  }
+
+  @Test
   func manualCompletedWorkoutMayHaveUnknownDuration() throws {
     let workout = try Workout(startedAt: .now)
     let pushUp = try Exercise(name: "Push-up", loadMode: .bodyweight)

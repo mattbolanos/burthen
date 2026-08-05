@@ -11,6 +11,8 @@ struct AddExerciseView: View {
   @Environment(\.dismiss) private var dismiss
   @Environment(\.modelContext) private var modelContext
 
+  let onAdd: (Exercise) -> Void
+
   @State private var name = ""
   @State private var loadMode = ExerciseLoadMode.externalResistance
   @State private var repetitionMode = ExerciseRepetitionMode.standard
@@ -19,6 +21,10 @@ struct AddExerciseView: View {
 
   private var canSave: Bool {
     !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+  }
+
+  init(onAdd: @escaping (Exercise) -> Void = { _ in }) {
+    self.onAdd = onAdd
   }
 
   var body: some View {
@@ -66,12 +72,13 @@ struct AddExerciseView: View {
 
   private func save() {
     do {
-      _ = try TrainingDataStore(modelContext: modelContext).createExercise(
+      let exercise = try TrainingDataStore(modelContext: modelContext).createExercise(
         name: name,
         loadMode: loadMode,
         repetitionMode: repetitionMode
       )
       try modelContext.save()
+      onAdd(exercise)
       dismiss()
     } catch {
       errorMessage = exerciseErrorMessage(for: error)

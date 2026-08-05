@@ -114,7 +114,7 @@ private struct ActiveWorkoutRow: View {
   var body: some View {
     HStack(spacing: LayoutMetrics.Spacing.large) {
       VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
-        Text(workout.homeDisplayName)
+        Text(workout.displayName)
           .font(.headline)
           .foregroundStyle(.primary)
 
@@ -158,7 +158,7 @@ private struct CompletedWorkoutRow: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
-      Text(workout.homeDisplayName)
+      Text(workout.displayName)
         .font(.headline)
         .foregroundStyle(.primary)
 
@@ -181,12 +181,6 @@ private struct CompletedWorkoutRow: View {
     )
     .padding(.vertical, LayoutMetrics.Spacing.extraSmall)
     .accessibilityElement(children: .combine)
-  }
-}
-
-private extension Workout {
-  var homeDisplayName: String {
-    name ?? "Unplanned Workout"
   }
 }
 
