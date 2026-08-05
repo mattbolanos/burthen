@@ -14,16 +14,14 @@ struct SettingsView: View {
           NavigationLink {
             TemplateManagementView()
           } label: {
-            Label("Workout Templates", systemImage: "rectangle.stack")
+            Text("Workout Templates")
           }
 
           NavigationLink {
             ExerciseManagementView()
           } label: {
-            Label("Exercises", systemImage: "dumbbell")
+            Text("Exercises")
           }
-        } header: {
-          SectionHeader("Training")
         }
       }
       .navigationTitle("Settings")
