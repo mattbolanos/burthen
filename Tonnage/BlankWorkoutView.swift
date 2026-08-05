@@ -17,7 +17,7 @@ struct BlankWorkoutView: View {
 
   var body: some View {
     List {
-      Section("Exercises") {
+      Section {
         if exercises.isEmpty {
           BlankWorkoutEmptyState(
             createExercise: addExercise,
@@ -42,6 +42,8 @@ struct BlankWorkoutView: View {
           .onDelete(perform: removeExercises)
           .onMove(perform: moveExercises)
         }
+      } header: {
+        SectionHeader("Exercises")
       }
 
       Button(action: startWorkout) {

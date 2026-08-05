@@ -48,10 +48,12 @@ struct EditExerciseView: View {
 
   var body: some View {
     Form {
-      Section("Exercise") {
+      Section {
         TextField("Name", text: $name)
           .textInputAutocapitalization(.words)
           .disabled(isReadOnly)
+      } header: {
+        SectionHeader("Exercise")
       }
 
       Section {
@@ -69,7 +71,7 @@ struct EditExerciseView: View {
             .tag(ExerciseRepetitionMode.perSide)
         }
       } header: {
-        Text("Tracking")
+        SectionHeader("Tracking")
       } footer: {
         if isReadOnly {
           Text("Built-in exercises can’t be edited.")

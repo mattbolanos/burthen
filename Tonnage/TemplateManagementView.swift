@@ -34,7 +34,7 @@ struct TemplateManagementView: View {
   var body: some View {
     List {
       if !activeTemplates.isEmpty {
-        Section("Active") {
+        Section {
           ForEach(activeTemplates) { template in
             TemplateNavigationRow(template: template)
               .deleteDisabled(!template.canBePermanentlyDeleted)
@@ -58,11 +58,13 @@ struct TemplateManagementView: View {
               }
           }
           .onDelete(perform: removeActiveTemplates)
+        } header: {
+          SectionHeader("Active")
         }
       }
 
       if !archivedTemplates.isEmpty {
-        Section("Archived") {
+        Section {
           ForEach(archivedTemplates) { template in
             TemplateNavigationRow(template: template)
               .deleteDisabled(!template.canBePermanentlyDeleted)
@@ -85,6 +87,8 @@ struct TemplateManagementView: View {
               }
           }
           .onDelete(perform: removeArchivedTemplates)
+        } header: {
+          SectionHeader("Archived")
         }
       }
     }

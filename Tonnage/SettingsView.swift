@@ -10,7 +10,7 @@ struct SettingsView: View {
   var body: some View {
     NavigationStack {
       Form {
-        Section("Training") {
+        Section {
           NavigationLink {
             TemplateManagementView()
           } label: {
@@ -22,6 +22,8 @@ struct SettingsView: View {
           } label: {
             Label("Exercises", systemImage: "dumbbell")
           }
+        } header: {
+          SectionHeader("Training")
         }
       }
       .navigationTitle("Settings")

@@ -30,7 +30,7 @@ struct ActiveWorkoutExerciseView: View {
     let orderedSets = workoutExercise.orderedSets
 
     List {
-      Section("Weight Unit") {
+      Section {
         Picker("Weight Unit", selection: $weightUnit) {
           ForEach(WeightUnit.allCases, id: \.self) { unit in
             Text(unit.displayAbbreviation)
@@ -42,6 +42,8 @@ struct ActiveWorkoutExerciseView: View {
         .listRowInsets(EdgeInsets())
         .listRowBackground(Color.clear)
         .onChange(of: weightUnit, updateWeightUnit)
+      } header: {
+        SectionHeader("Weight Unit")
       }
 
       Section {
@@ -64,7 +66,7 @@ struct ActiveWorkoutExerciseView: View {
 
         Button("Add Set", systemImage: "plus", action: addSet)
       } header: {
-        Text("Sets")
+        SectionHeader("Sets")
       } footer: {
         Text("Working sets count toward workout load; warm-ups don’t.")
       }

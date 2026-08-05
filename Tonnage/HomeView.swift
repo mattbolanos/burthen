@@ -33,7 +33,7 @@ struct HomeView: View {
             .buttonStyle(.plain)
             .accessibilityHint("Returns to the active workout.")
           } header: {
-            WorkoutSectionHeader("Active Workout")
+            SectionHeader("Active")
           }
         }
 
@@ -43,7 +43,7 @@ struct HomeView: View {
               CompletedWorkoutRow(workout: workout)
             }
           } header: {
-            WorkoutSectionHeader("Recent Workouts")
+            SectionHeader("Recent")
           }
         }
       }
@@ -67,6 +67,12 @@ struct HomeView: View {
               Label("Choose a Template", systemImage: "rectangle.stack")
             }
           }
+          .disabled(activeWorkout != nil)
+          .accessibilityHint(
+            activeWorkout == nil
+              ? "Choose how to start a workout."
+              : "Finish or discard the active workout before starting another one."
+          )
         }
       }
       .navigationDestination(for: NewWorkoutRoute.self) { route in
@@ -88,23 +94,6 @@ struct HomeView: View {
       return lhs.id.uuidString > rhs.id.uuidString
     }
     return lhsDate > rhsDate
-  }
-}
-
-private struct WorkoutSectionHeader: View {
-  let title: LocalizedStringKey
-
-  init(_ title: LocalizedStringKey) {
-    self.title = title
-  }
-
-  var body: some View {
-    Text(title)
-      .font(.title2.weight(.bold))
-      .foregroundStyle(Color.primary)
-      .textCase(nil)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .listRowInsets(.leading, 0)
   }
 }
 

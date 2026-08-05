@@ -134,12 +134,14 @@ private struct WorkoutTemplateForm: View {
         }
       }
 
-      Section("Template") {
+      Section {
         TextField("Name", text: $draft.name)
           .textInputAutocapitalization(.words)
 
         TextField("Notes", text: $draft.notes, axis: .vertical)
           .lineLimit(2...5)
+      } header: {
+        SectionHeader("Template")
       }
 
       Section {
@@ -167,7 +169,7 @@ private struct WorkoutTemplateForm: View {
           action: selectExercises
         )
       } header: {
-        Text("Exercises")
+        SectionHeader("Exercises")
       } footer: {
         if draft.exercises.isEmpty {
           Text("Add exercises in the order you want to perform them.")

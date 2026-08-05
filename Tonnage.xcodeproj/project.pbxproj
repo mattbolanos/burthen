@@ -11,13 +11,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		A100000230155EBB003E2C6E /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 83013A4C30155EBB003E2C6E /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = A100000730155EBB003E2C6E;
-			remoteInfo = TonnageWidgets;
-		};
 		83013A6430155EBD003E2C6E /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 83013A4C30155EBB003E2C6E /* Project object */;
@@ -31,6 +24,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 83013A5330155EBB003E2C6E;
 			remoteInfo = Tonnage;
+		};
+		A100000230155EBB003E2C6E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83013A4C30155EBB003E2C6E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A100000730155EBB003E2C6E;
+			remoteInfo = TonnageWidgets;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -49,23 +49,13 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		A100000330155EBB003E2C6E /* TonnageWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TonnageWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		83013A5430155EBB003E2C6E /* Tonnage.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tonnage.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		83013A6330155EBD003E2C6E /* TonnageTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TonnageTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		83013A6D30155EBD003E2C6E /* TonnageUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TonnageUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A100000330155EBB003E2C6E /* TonnageWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TonnageWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		A100000430155EBB003E2C6E /* TonnageActivityShared */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = TonnageActivityShared;
-			sourceTree = "<group>";
-		};
-		A100000530155EBB003E2C6E /* TonnageWidgets */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = TonnageWidgets;
-			sourceTree = "<group>";
-		};
 		83013A5630155EBB003E2C6E /* Tonnage */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Tonnage;
@@ -81,16 +71,19 @@
 			path = TonnageUITests;
 			sourceTree = "<group>";
 		};
+		A100000430155EBB003E2C6E /* TonnageActivityShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TonnageActivityShared;
+			sourceTree = "<group>";
+		};
+		A100000530155EBB003E2C6E /* TonnageWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TonnageWidgets;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		A100000630155EBB003E2C6E /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		83013A5130155EBB003E2C6E /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -106,6 +99,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		83013A6A30155EBD003E2C6E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A100000630155EBB003E2C6E /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -141,29 +141,6 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A100000730155EBB003E2C6E /* TonnageWidgets */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = A100000E30155EBB003E2C6E /* Build configuration list for PBXNativeTarget "TonnageWidgets" */;
-			buildPhases = (
-				A100000930155EBB003E2C6E /* Sources */,
-				A100000630155EBB003E2C6E /* Frameworks */,
-				A100000830155EBB003E2C6E /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				A100000530155EBB003E2C6E /* TonnageWidgets */,
-				A100000430155EBB003E2C6E /* TonnageActivityShared */,
-			);
-			name = TonnageWidgets;
-			packageProductDependencies = (
-			);
-			productName = TonnageWidgets;
-			productReference = A100000330155EBB003E2C6E /* TonnageWidgets.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 		83013A5330155EBB003E2C6E /* Tonnage */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 83013A7730155EBD003E2C6E /* Build configuration list for PBXNativeTarget "Tonnage" */;
@@ -235,6 +212,29 @@
 			productReference = 83013A6D30155EBD003E2C6E /* TonnageUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		A100000730155EBB003E2C6E /* TonnageWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A100000E30155EBB003E2C6E /* Build configuration list for PBXNativeTarget "TonnageWidgets" */;
+			buildPhases = (
+				A100000930155EBB003E2C6E /* Sources */,
+				A100000630155EBB003E2C6E /* Frameworks */,
+				A100000830155EBB003E2C6E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A100000430155EBB003E2C6E /* TonnageActivityShared */,
+				A100000530155EBB003E2C6E /* TonnageWidgets */,
+			);
+			name = TonnageWidgets;
+			packageProductDependencies = (
+			);
+			productName = TonnageWidgets;
+			productReference = A100000330155EBB003E2C6E /* TonnageWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -245,9 +245,6 @@
 				LastSwiftUpdateCheck = 2660;
 				LastUpgradeCheck = 2660;
 				TargetAttributes = {
-					A100000730155EBB003E2C6E = {
-						CreatedOnToolsVersion = 26.6;
-					};
 					83013A5330155EBB003E2C6E = {
 						CreatedOnToolsVersion = 26.6;
 					};
@@ -258,6 +255,9 @@
 					83013A6C30155EBD003E2C6E = {
 						CreatedOnToolsVersion = 26.6;
 						TestTargetID = 83013A5330155EBB003E2C6E;
+					};
+					A100000730155EBB003E2C6E = {
+						CreatedOnToolsVersion = 26.6;
 					};
 				};
 			};
@@ -284,13 +284,6 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		A100000830155EBB003E2C6E /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		83013A5230155EBB003E2C6E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -312,16 +305,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-/* End PBXResourcesBuildPhase section */
-
-/* Begin PBXSourcesBuildPhase section */
-		A100000930155EBB003E2C6E /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
+		A100000830155EBB003E2C6E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
 		83013A5030155EBB003E2C6E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -343,14 +336,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A100000930155EBB003E2C6E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		A100000A30155EBB003E2C6E /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = A100000730155EBB003E2C6E /* TonnageWidgets */;
-			targetProxy = A100000230155EBB003E2C6E /* PBXContainerItemProxy */;
-		};
 		83013A6530155EBD003E2C6E /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 83013A5330155EBB003E2C6E /* Tonnage */;
@@ -361,71 +356,14 @@
 			target = 83013A5330155EBB003E2C6E /* Tonnage */;
 			targetProxy = 83013A6E30155EBD003E2C6E /* PBXContainerItemProxy */;
 		};
+		A100000A30155EBB003E2C6E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A100000730155EBB003E2C6E /* TonnageWidgets */;
+			targetProxy = A100000230155EBB003E2C6E /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		A100000C30155EBB003E2C6E /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				APPLICATION_EXTENSION_API_ONLY = YES;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = H2Q833KX49;
-				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = TonnageWidgets-Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.mattbolanos.Tonnage.TonnageWidgets;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTS_MACCATALYST = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		A100000D30155EBB003E2C6E /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				APPLICATION_EXTENSION_API_ONLY = YES;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = H2Q833KX49;
-				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = TonnageWidgets-Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.mattbolanos.Tonnage.TonnageWidgets;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTS_MACCATALYST = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
 		83013A7530155EBD003E2C6E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -699,18 +637,71 @@
 			};
 			name = Release;
 		};
+		A100000C30155EBB003E2C6E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = H2Q833KX49;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "TonnageWidgets-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mattbolanos.Tonnage.TonnageWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A100000D30155EBB003E2C6E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = H2Q833KX49;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "TonnageWidgets-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mattbolanos.Tonnage.TonnageWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A100000E30155EBB003E2C6E /* Build configuration list for PBXNativeTarget "TonnageWidgets" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				A100000C30155EBB003E2C6E /* Debug */,
-				A100000D30155EBB003E2C6E /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		83013A4F30155EBB003E2C6E /* Build configuration list for PBXProject "Tonnage" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -743,6 +734,15 @@
 			buildConfigurations = (
 				83013A7E30155EBD003E2C6E /* Debug */,
 				83013A7F30155EBD003E2C6E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A100000E30155EBB003E2C6E /* Build configuration list for PBXNativeTarget "TonnageWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A100000C30155EBB003E2C6E /* Debug */,
+				A100000D30155EBB003E2C6E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

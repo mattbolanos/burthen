@@ -35,7 +35,7 @@ struct ExerciseManagementView: View {
   var body: some View {
     List {
       if !activeExercises.isEmpty {
-        Section("Active") {
+        Section {
           ForEach(activeExercises) { exercise in
             ExerciseNavigationRow(exercise: exercise)
               .deleteDisabled(exercise.origin == .seeded)
@@ -53,11 +53,13 @@ struct ExerciseManagementView: View {
               }
           }
           .onDelete(perform: removeActiveExercises)
+        } header: {
+          SectionHeader("Active")
         }
       }
 
       if !archivedExercises.isEmpty {
-        Section("Archived") {
+        Section {
           ForEach(archivedExercises) { exercise in
             ExerciseNavigationRow(exercise: exercise)
               .deleteDisabled(exercise.origin == .seeded)
@@ -82,6 +84,8 @@ struct ExerciseManagementView: View {
               }
           }
           .onDelete(perform: removeArchivedExercises)
+        } header: {
+          SectionHeader("Archived")
         }
       }
     }

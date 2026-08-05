@@ -30,12 +30,14 @@ struct AddExerciseView: View {
   var body: some View {
     NavigationStack {
       Form {
-        Section("Exercise") {
+        Section {
           TextField("Name", text: $name)
             .textInputAutocapitalization(.words)
+        } header: {
+          SectionHeader("Exercise")
         }
 
-        Section("Tracking") {
+        Section {
           Picker("Load", selection: $loadMode) {
             Text("External Resistance")
               .tag(ExerciseLoadMode.externalResistance)
@@ -49,6 +51,8 @@ struct AddExerciseView: View {
             Text("Per Side")
               .tag(ExerciseRepetitionMode.perSide)
           }
+        } header: {
+          SectionHeader("Tracking")
         }
       }
       .navigationTitle("New Exercise")
