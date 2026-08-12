@@ -19,8 +19,6 @@ struct ExerciseDeletionImpact: Equatable {
 
 @MainActor
 struct TrainingDataStore {
-  private static let defaultWorkingSetCount = 3
-
   let modelContext: ModelContext
 
   func startWorkout(
@@ -61,6 +59,8 @@ struct TrainingDataStore {
     name: String,
     loadMode: ExerciseLoadMode,
     repetitionMode: ExerciseRepetitionMode = .standard,
+    startingWorkingWeight: Decimal? = nil,
+    startingWorkingWeightUnit: WeightUnit = .pounds,
     origin: ExerciseOrigin = .custom
   ) throws -> Exercise {
     let normalizedName = try validatedName(name)
@@ -73,6 +73,8 @@ struct TrainingDataStore {
       name: normalizedName,
       loadMode: loadMode,
       repetitionMode: repetitionMode,
+      startingWorkingWeight: startingWorkingWeight,
+      startingWorkingWeightUnit: startingWorkingWeightUnit,
       origin: origin
     )
     modelContext.insert(exercise)
@@ -84,6 +86,26 @@ struct TrainingDataStore {
     name: String,
     loadMode: ExerciseLoadMode,
     repetitionMode: ExerciseRepetitionMode,
+    at date: Date = .now
+  ) throws {
+    try updateExercise(
+      exercise,
+      name: name,
+      loadMode: loadMode,
+      repetitionMode: repetitionMode,
+      startingWorkingWeight: exercise.startingWorkingWeight,
+      startingWorkingWeightUnit: exercise.startingWorkingWeightUnit ?? .pounds,
+      at: date
+    )
+  }
+
+  func updateExercise(
+    _ exercise: Exercise,
+    name: String,
+    loadMode: ExerciseLoadMode,
+    repetitionMode: ExerciseRepetitionMode,
+    startingWorkingWeight: Decimal?,
+    startingWorkingWeightUnit: WeightUnit,
     at date: Date = .now
   ) throws {
     guard exercise.origin == .custom else {
@@ -106,6 +128,7 @@ struct TrainingDataStore {
     guard !classificationChanged || !exercise.hasHistoricalSets else {
       throw WorkoutModelError.exerciseClassificationInUse
     }
+    try Exercise.validateStartingWorkingWeight(startingWorkingWeight)
 
     if exercise.name != normalizedName {
       try exercise.rename(to: normalizedName, at: date)
@@ -114,6 +137,15 @@ struct TrainingDataStore {
       try exercise.updateClassification(
         loadMode: loadMode,
         repetitionMode: repetitionMode,
+        at: date
+      )
+    }
+    if exercise.startingWorkingWeight != startingWorkingWeight
+      || exercise.startingWorkingWeightUnit
+        != (startingWorkingWeight == nil ? nil : startingWorkingWeightUnit) {
+      try exercise.updateStartingWorkingWeight(
+        startingWorkingWeight,
+        unit: startingWorkingWeightUnit,
         at: date
       )
     }
@@ -194,13 +226,10 @@ struct TrainingDataStore {
     for workoutExercise in workout.orderedExercises
     where workoutExercise.exerciseSets.isEmpty {
       let setCount = max(
-        workoutExercise.plannedWorkingSetCount ?? Self.defaultWorkingSetCount,
+        workoutExercise.plannedWorkingSetCount ?? TrainingDefaults.workingSetCount,
         1
       )
-      for _ in 0..<setCount {
-        let exerciseSet = try workoutExercise.addDraftSet()
-        modelContext.insert(exerciseSet)
-      }
+      try addDraftSets(count: setCount, to: workoutExercise)
     }
   }
 
@@ -214,14 +243,14 @@ struct TrainingDataStore {
 
     let workoutExercise = try workout.addExercise(
       exercise,
-      plannedWorkingSetCount: Self.defaultWorkingSetCount,
+      plannedWorkingSetCount: TrainingDefaults.workingSetCount,
       at: date
     )
     modelContext.insert(workoutExercise)
-    for _ in 0..<Self.defaultWorkingSetCount {
-      let exerciseSet = try workoutExercise.addDraftSet()
-      modelContext.insert(exerciseSet)
-    }
+    try addDraftSets(
+      count: TrainingDefaults.workingSetCount,
+      to: workoutExercise
+    )
     return workoutExercise
   }
 
@@ -379,6 +408,116 @@ struct TrainingDataStore {
     }
     try requireInProgress(workout)
     return workout
+  }
+
+  private func addDraftSets(
+    count: Int,
+    to workoutExercise: WorkoutExercise
+  ) throws {
+    guard let exercise = workoutExercise.exercise else {
+      throw WorkoutModelError.missingExercise
+    }
+
+    let completedSets = completedSets(for: exercise)
+    let startingWeight = preferredStartingWeight(
+      for: exercise,
+      completedSets: completedSets
+    )
+    let startingRepetitions = preferredStartingRepetitions(
+      completedSets: completedSets
+    )
+
+    if let startingWeight {
+      workoutExercise.preferredWeightUnit = startingWeight.unit
+    }
+
+    for _ in 0..<count {
+      let exerciseSet = try workoutExercise.addDraftSet(
+        defaultRepetitions: startingRepetitions
+      )
+      if exerciseSet.weight == nil, let startingWeight {
+        exerciseSet.weight = startingWeight.value
+        exerciseSet.weightUnit = startingWeight.unit
+      }
+      modelContext.insert(exerciseSet)
+    }
+  }
+
+  private func preferredStartingWeight(
+    for exercise: Exercise,
+    completedSets: [ExerciseSet]
+  ) -> (value: Decimal, unit: WeightUnit)? {
+    if !completedSets.isEmpty {
+      let completedWorkingSets = completedSets.filter { exerciseSet in
+        exerciseSet.kind == .working
+          && exerciseSet.weight != nil
+          && exerciseSet.weightUnit != nil
+      }
+      guard
+        let exerciseSet = completedWorkingSets.max(by: isEarlierCompletedSet),
+        let weight = exerciseSet.weight,
+        let unit = exerciseSet.weightUnit
+      else { return nil }
+
+      return (weight, unit)
+    }
+
+    guard
+      let weight = exercise.startingWorkingWeight,
+      let unit = exercise.startingWorkingWeightUnit
+    else { return nil }
+
+    return (weight, unit)
+  }
+
+  private func preferredStartingRepetitions(
+    completedSets: [ExerciseSet]
+  ) -> Int {
+    let latestWorkingSet = completedSets
+      .filter { $0.kind == .working }
+      .max(by: isEarlierCompletedSet)
+
+    return max(
+      latestWorkingSet?.reps ?? TrainingDefaults.repetitionCount,
+      1
+    )
+  }
+
+  private func completedSets(for exercise: Exercise) -> [ExerciseSet] {
+    exercise.workoutExercises.flatMap { workoutExercise in
+      guard workoutExercise.workout?.status == .completed else {
+        return [ExerciseSet]()
+      }
+      return workoutExercise.exerciseSets
+    }
+  }
+
+  private func isEarlierCompletedSet(
+    _ lhs: ExerciseSet,
+    _ rhs: ExerciseSet
+  ) -> Bool {
+    guard
+      let lhsWorkout = lhs.workoutExercise?.workout,
+      let rhsWorkout = rhs.workoutExercise?.workout
+    else { return lhs.id.uuidString < rhs.id.uuidString }
+
+    let lhsWorkoutDate = lhsWorkout.endedAt ?? lhsWorkout.updatedAt
+    let rhsWorkoutDate = rhsWorkout.endedAt ?? rhsWorkout.updatedAt
+    if lhsWorkoutDate != rhsWorkoutDate {
+      return lhsWorkoutDate < rhsWorkoutDate
+    }
+
+    let lhsSetDate = lhs.completedAt ?? lhsWorkoutDate
+    let rhsSetDate = rhs.completedAt ?? rhsWorkoutDate
+    if lhsSetDate != rhsSetDate {
+      return lhsSetDate < rhsSetDate
+    }
+
+    if lhs.position != rhs.position {
+      return lhs.position < rhs.position
+    }
+
+    return lhs.id.uuidString < rhs.id.uuidString
   }
 
   private func validate(_ exercises: [TemplateExercisePlan]) throws {

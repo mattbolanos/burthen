@@ -6,17 +6,71 @@
 import SwiftData
 import SwiftUI
 
+struct WorkoutTemplateSeed: Identifiable {
+  let id = UUID()
+  let name: String
+  let notes: String?
+  let exercisePlans: [TemplateExercisePlan]
+
+  init(
+    name: String = "",
+    notes: String? = nil,
+    exercisePlans: [TemplateExercisePlan] = []
+  ) {
+    self.name = name
+    self.notes = notes
+    self.exercisePlans = exercisePlans
+  }
+
+  init(exercises: [Exercise]) {
+    self.init(
+      exercisePlans: exercises.map { exercise in
+        TemplateExercisePlan(
+          exercise: exercise,
+          plannedWorkingSetCount: TrainingDefaults.workingSetCount
+        )
+      }
+    )
+  }
+
+  init(workout: Workout) {
+    self.init(
+      name: workout.sourceTemplate == nil ? workout.name ?? "" : "",
+      notes: workout.notes,
+      exercisePlans: workout.templateExercisePlans
+    )
+  }
+}
+
 struct AddWorkoutTemplateView: View {
   @Environment(\.dismiss) private var dismiss
   @Environment(\.modelContext) private var modelContext
 
-  @State private var draft = WorkoutTemplateDraft()
+  let offersWorkoutStart: Bool
+
+  @State private var draft: WorkoutTemplateDraft
+  @State private var startsWorkoutAfterCreating = true
   @State private var isShowingError = false
+  @State private var dismissAfterError = false
+  @State private var errorTitle = ""
   @State private var errorMessage = ""
+
+  init(
+    seed: WorkoutTemplateSeed = WorkoutTemplateSeed(),
+    offersWorkoutStart: Bool = false
+  ) {
+    self.offersWorkoutStart = offersWorkoutStart
+    _draft = State(initialValue: WorkoutTemplateDraft(seed: seed))
+  }
 
   var body: some View {
     NavigationStack {
-      WorkoutTemplateForm(draft: $draft)
+      WorkoutTemplateForm(
+        draft: $draft,
+        startsWorkoutAfterCreating: offersWorkoutStart
+          ? $startsWorkoutAfterCreating
+          : nil
+      )
         .navigationTitle("New Template")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -24,31 +78,71 @@ struct AddWorkoutTemplateView: View {
             Button("Cancel", action: dismiss.callAsFunction)
           }
           ToolbarItemGroup(placement: .topBarTrailing) {
-            Button("Add", action: save)
-              .disabled(!draft.isValid)
+            Button(
+              offersWorkoutStart ? "Create" : "Add",
+              action: createTemplate
+            )
+            .disabled(!draft.isValid)
           }
         }
-        .alert("Template Couldn’t Be Added", isPresented: $isShowingError) {
-          Button("OK", role: .cancel) {}
+        .alert(errorTitle, isPresented: $isShowingError) {
+          Button("OK", role: .cancel, action: handleErrorDismissal)
         } message: {
           Text(errorMessage)
         }
     }
   }
 
-  private func save() {
+  private func createTemplate() {
     do {
-      _ = try TrainingDataStore(modelContext: modelContext).createTemplate(
+      let store = TrainingDataStore(modelContext: modelContext)
+      let template = try store.createTemplate(
         name: draft.normalizedName,
         notes: draft.normalizedNotes,
         exercises: draft.exercisePlans
       )
       try modelContext.save()
-      dismiss()
+
+      guard offersWorkoutStart, startsWorkoutAfterCreating else {
+        dismiss()
+        return
+      }
+
+      startWorkout(from: template)
     } catch {
+      modelContext.rollback()
+      dismissAfterError = false
+      errorTitle = offersWorkoutStart
+        ? "Template Couldn’t Be Created"
+        : "Template Couldn’t Be Added"
       errorMessage = templateErrorMessage(for: error)
       isShowingError = true
     }
+  }
+
+  private func startWorkout(from template: WorkoutTemplate) {
+    do {
+      _ = try TrainingDataStore(modelContext: modelContext).startWorkout(
+        from: template
+      )
+      try modelContext.save()
+      dismiss()
+    } catch {
+      modelContext.rollback()
+      dismissAfterError = true
+      errorTitle = "Workout Couldn’t Be Started"
+      errorMessage = """
+        The template was created, but the workout couldn’t be started. \
+        \(templateErrorMessage(for: error))
+        """
+      isShowingError = true
+    }
+  }
+
+  private func handleErrorDismissal() {
+    guard dismissAfterError else { return }
+    dismissAfterError = false
+    dismiss()
   }
 }
 
@@ -111,19 +205,24 @@ struct EditWorkoutTemplateView: View {
 
 private struct WorkoutTemplateForm: View {
   @Binding var draft: WorkoutTemplateDraft
+  let startsWorkoutAfterCreating: Binding<Bool>?
   let showsArchivedNotice: Bool
 
   @State private var isSelectingExercises = false
 
   init(
     draft: Binding<WorkoutTemplateDraft>,
+    startsWorkoutAfterCreating: Binding<Bool>? = nil,
     showsArchivedNotice: Bool = false
   ) {
     _draft = draft
+    self.startsWorkoutAfterCreating = startsWorkoutAfterCreating
     self.showsArchivedNotice = showsArchivedNotice
   }
 
   var body: some View {
+    let duplicateExerciseIDs = draft.duplicateExerciseIDs
+
     Form {
       if showsArchivedNotice {
         Section {
@@ -140,6 +239,13 @@ private struct WorkoutTemplateForm: View {
 
         TextField("Notes", text: $draft.notes, axis: .vertical)
           .lineLimit(2...5)
+
+        if let startsWorkoutAfterCreating {
+          Toggle("Start After Creating", isOn: startsWorkoutAfterCreating)
+            .accessibilityHint(
+              "Starts a workout with this template after it’s created."
+            )
+        }
       } header: {
         SectionHeader("Template")
       }
@@ -147,35 +253,45 @@ private struct WorkoutTemplateForm: View {
       Section {
         if !draft.exercises.isEmpty {
           ForEach($draft.exercises) { $exercise in
-            TemplateExerciseEditorRow(item: $exercise)
-              .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                Button(
-                  "Delete Exercise",
-                  systemImage: "trash",
-                  role: .destructive
-                ) {
-                  removeExercise(exercise)
-                }
-                .labelStyle(.iconOnly)
+            TemplateExerciseEditorRow(
+              item: $exercise,
+              isRepeated: duplicateExerciseIDs.contains(exercise.exercise.id)
+            )
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+              Button(
+                "Delete Exercise",
+                systemImage: "trash",
+                role: .destructive
+              ) {
+                removeExercise(exercise)
               }
+              .labelStyle(.iconOnly)
+            }
           }
           .onDelete(perform: removeExercises)
           .onMove(perform: moveExercises)
         }
 
-        Button(
-          "Add Exercises",
-          systemImage: "plus",
-          action: selectExercises
-        )
+        Button(action: selectExercises) {
+          Label("Add Exercises", systemImage: "plus")
+            .foregroundStyle(.pink)
+        }
       } header: {
         SectionHeader("Exercises")
       } footer: {
         if draft.exercises.isEmpty {
           Text("Add exercises in the order you want to perform them.")
+        } else if draft.hasUnavailableExercises && draft.hasDuplicateExercises {
+          Text("Remove archived and repeated exercises before saving this template.")
+            .foregroundStyle(.orange)
         } else if draft.hasUnavailableExercises {
           Text("Remove archived exercises before saving this template.")
             .foregroundStyle(.orange)
+        } else if draft.hasDuplicateExercises {
+          Text("Remove repeated exercises before saving this template.")
+            .foregroundStyle(.orange)
+        } else {
+          Text("Templates save exercise order and working set counts, not weights or reps.")
         }
       }
     }
@@ -203,17 +319,24 @@ private struct WorkoutTemplateForm: View {
 
 private struct TemplateExerciseEditorRow: View {
   @Binding var item: TemplateExerciseDraft
+  let isRepeated: Bool
 
   var body: some View {
     VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.small) {
       HStack {
         Text(item.exercise.name)
         Spacer()
-        if item.exercise.isArchived {
-          Label("Archived", systemImage: "archivebox")
-            .font(.caption)
-            .foregroundStyle(.orange)
+
+        VStack(alignment: .trailing, spacing: LayoutMetrics.Spacing.extraSmall) {
+          if item.exercise.isArchived {
+            Label("Archived", systemImage: "archivebox")
+          }
+          if isRepeated {
+            Label("Repeated", systemImage: "exclamationmark.triangle")
+          }
         }
+        .font(.caption)
+        .foregroundStyle(.orange)
       }
 
       Stepper(
@@ -237,27 +360,53 @@ private struct TemplateExerciseSelectionView: View {
 
   @Binding var selectedExercises: [TemplateExerciseDraft]
   @State private var pendingExerciseIDs: Set<UUID> = []
+  @State private var newlyCreatedExerciseIDs: Set<UUID> = []
+  @State private var isAddingExercise = false
 
   private var existingExerciseIDs: Set<UUID> {
     Set(selectedExercises.map { $0.exercise.id })
   }
 
+  private var hasSelectedExercises: Bool {
+    !pendingExerciseIDs.isEmpty
+      || !newlyCreatedExerciseIDs.isDisjoint(with: existingExerciseIDs)
+  }
+
   var body: some View {
     NavigationStack {
-      List(activeExercises) { exercise in
-        TemplateExerciseSelectionRow(
-          exercise: exercise,
-          isAlreadyAdded: existingExerciseIDs.contains(exercise.id),
-          pendingExerciseIDs: $pendingExerciseIDs
-        )
+      List {
+        if !activeExercises.isEmpty {
+          Section {
+            Button(action: addExercise) {
+              Label("New Exercise", systemImage: "plus")
+                .foregroundStyle(.pink)
+            }
+          }
+
+          Section {
+            ForEach(activeExercises) { exercise in
+              TemplateExerciseSelectionRow(
+                exercise: exercise,
+                isAlreadyAdded: isAlreadyAdded(exercise),
+                isSelected: isSelected(exercise),
+                action: { toggleSelection(of: exercise) }
+              )
+            }
+          }
+        }
       }
       .overlay {
         if activeExercises.isEmpty {
-          ContentUnavailableView(
-            "No Exercises",
-            systemImage: "dumbbell",
-            description: Text("Add exercises in Settings before building a template.")
-          )
+          ContentUnavailableView {
+            Label("No Exercises", systemImage: "dumbbell")
+          } description: {
+            Text("Create an exercise to add it to this template.")
+          } actions: {
+            Button("New Exercise", systemImage: "plus", action: addExercise)
+              .buttonStyle(.borderedProminent)
+              .controlSize(.large)
+              .tint(.pink)
+          }
         }
       }
       .navigationTitle("Add Exercises")
@@ -268,9 +417,53 @@ private struct TemplateExerciseSelectionView: View {
         }
         ToolbarItem(placement: .confirmationAction) {
           Button("Add", action: addSelectedExercises)
-            .disabled(pendingExerciseIDs.isEmpty)
+            .disabled(!hasSelectedExercises)
         }
       }
+      .sheet(isPresented: $isAddingExercise) {
+        AddExerciseView(onAdd: selectNewExercise)
+      }
+    }
+  }
+
+  private func addExercise() {
+    isAddingExercise = true
+  }
+
+  private func selectNewExercise(_ exercise: Exercise) {
+    guard !existingExerciseIDs.contains(exercise.id) else { return }
+    selectedExercises.append(TemplateExerciseDraft(exercise: exercise))
+    newlyCreatedExerciseIDs.insert(exercise.id)
+  }
+
+  private func isAlreadyAdded(_ exercise: Exercise) -> Bool {
+    existingExerciseIDs.contains(exercise.id)
+      && !newlyCreatedExerciseIDs.contains(exercise.id)
+  }
+
+  private func isSelected(_ exercise: Exercise) -> Bool {
+    pendingExerciseIDs.contains(exercise.id)
+      || (
+        newlyCreatedExerciseIDs.contains(exercise.id)
+          && existingExerciseIDs.contains(exercise.id)
+      )
+  }
+
+  private func toggleSelection(of exercise: Exercise) {
+    if newlyCreatedExerciseIDs.contains(exercise.id) {
+      toggleNewlyCreatedExercise(exercise)
+    } else if pendingExerciseIDs.contains(exercise.id) {
+      pendingExerciseIDs.remove(exercise.id)
+    } else {
+      pendingExerciseIDs.insert(exercise.id)
+    }
+  }
+
+  private func toggleNewlyCreatedExercise(_ exercise: Exercise) {
+    if existingExerciseIDs.contains(exercise.id) {
+      selectedExercises.removeAll { $0.exercise.id == exercise.id }
+    } else {
+      selectedExercises.append(TemplateExerciseDraft(exercise: exercise))
     }
   }
 
@@ -285,11 +478,8 @@ private struct TemplateExerciseSelectionView: View {
 private struct TemplateExerciseSelectionRow: View {
   let exercise: Exercise
   let isAlreadyAdded: Bool
-  @Binding var pendingExerciseIDs: Set<UUID>
-
-  private var isSelected: Bool {
-    pendingExerciseIDs.contains(exercise.id)
-  }
+  let isSelected: Bool
+  let action: () -> Void
 
   private var accessibilityValue: String {
     if isAlreadyAdded {
@@ -302,7 +492,7 @@ private struct TemplateExerciseSelectionRow: View {
   }
 
   var body: some View {
-    Button(action: toggleSelection) {
+    Button(action: action) {
       HStack {
         VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
           Text(exercise.name)
@@ -321,7 +511,7 @@ private struct TemplateExerciseSelectionRow: View {
         } else if isSelected {
           Image(systemName: "checkmark")
             .fontWeight(.semibold)
-            .foregroundStyle(.tint)
+            .foregroundStyle(.pink)
         }
       }
       .contentShape(.rect)
@@ -330,14 +520,6 @@ private struct TemplateExerciseSelectionRow: View {
     .disabled(isAlreadyAdded)
     .accessibilityLabel(exercise.name)
     .accessibilityValue(accessibilityValue)
-  }
-
-  private func toggleSelection() {
-    if isSelected {
-      pendingExerciseIDs.remove(exercise.id)
-    } else {
-      pendingExerciseIDs.insert(exercise.id)
-    }
   }
 }
 
@@ -348,6 +530,18 @@ private struct WorkoutTemplateDraft {
 
   init() {}
 
+  init(seed: WorkoutTemplateSeed) {
+    name = seed.name
+    notes = seed.notes ?? ""
+    exercises = seed.exercisePlans.map { plan in
+      TemplateExerciseDraft(
+        exercise: plan.exercise,
+        plannedWorkingSetCount: plan.plannedWorkingSetCount
+          ?? TrainingDefaults.workingSetCount
+      )
+    }
+  }
+
   init(template: WorkoutTemplate) {
     name = template.name
     notes = template.notes ?? ""
@@ -356,7 +550,8 @@ private struct WorkoutTemplateDraft {
       return TemplateExerciseDraft(
         id: templateExercise.id,
         exercise: exercise,
-        plannedWorkingSetCount: templateExercise.plannedWorkingSetCount ?? 3
+        plannedWorkingSetCount: templateExercise.plannedWorkingSetCount
+          ?? TrainingDefaults.workingSetCount
       )
     }
   }
@@ -374,10 +569,28 @@ private struct WorkoutTemplateDraft {
     exercises.contains { $0.exercise.isArchived }
   }
 
+  var duplicateExerciseIDs: Set<UUID> {
+    var seenExerciseIDs = Set<UUID>()
+    var duplicateExerciseIDs = Set<UUID>()
+
+    for exercise in exercises {
+      if !seenExerciseIDs.insert(exercise.exercise.id).inserted {
+        duplicateExerciseIDs.insert(exercise.exercise.id)
+      }
+    }
+
+    return duplicateExerciseIDs
+  }
+
+  var hasDuplicateExercises: Bool {
+    !duplicateExerciseIDs.isEmpty
+  }
+
   var isValid: Bool {
     !normalizedName.isEmpty
       && !exercises.isEmpty
       && !hasUnavailableExercises
+      && !hasDuplicateExercises
   }
 
   var exercisePlans: [TemplateExercisePlan] {
@@ -411,7 +624,7 @@ private struct TemplateExerciseDraft: Identifiable {
   init(
     id: UUID = UUID(),
     exercise: Exercise,
-    plannedWorkingSetCount: Int = 3
+    plannedWorkingSetCount: Int = TrainingDefaults.workingSetCount
   ) {
     self.id = id
     self.exercise = exercise
@@ -439,7 +652,8 @@ extension WorkoutTemplate {
         guard let exercise = templateExercise.exercise else { return nil }
         return WorkoutTemplateExerciseSignature(
           exerciseID: exercise.id,
-          plannedWorkingSetCount: templateExercise.plannedWorkingSetCount ?? 3
+          plannedWorkingSetCount: templateExercise.plannedWorkingSetCount
+            ?? TrainingDefaults.workingSetCount
         )
       }
     )

@@ -9,6 +9,7 @@ import SwiftUI
 struct ExerciseSetPicker: View {
   private static let repetitionRange = 1...49
   private static let wholeWeightRange = 0...399
+  private static let persistenceDelay = Duration.milliseconds(300)
 
   @Environment(\.dismiss) private var dismiss
   @Environment(\.modelContext) private var modelContext
@@ -21,6 +22,8 @@ struct ExerciseSetPicker: View {
   @State private var repetitions: Int
   @State private var wholeWeight: Int
   @State private var usesHalfWeight: Bool
+  @State private var hasPendingChanges = false
+  @State private var persistenceTask: Task<Void, Never>?
   @State private var isShowingError = false
   @State private var errorMessage = ""
 
@@ -164,13 +167,13 @@ struct ExerciseSetPicker: View {
       .padding(.horizontal, LayoutMetrics.Padding.horizontalContent)
       .navigationTitle("Set \(setNumber)")
       .navigationBarTitleDisplayMode(.inline)
-      .onChange(of: wholeWeight, enforceWeightLimit)
+      .onChange(of: kind, scheduleSave)
+      .onChange(of: repetitions, scheduleSave)
+      .onChange(of: wholeWeight, updateWholeWeight)
+      .onChange(of: usesHalfWeight, scheduleSave)
       .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("Cancel", action: dismiss.callAsFunction)
-        }
         ToolbarItem(placement: .confirmationAction) {
-          Button("Done", action: save)
+          Button("Done", action: finish)
         }
       }
       .alert("Set Couldn’t Be Updated", isPresented: $isShowingError) {
@@ -180,6 +183,7 @@ struct ExerciseSetPicker: View {
     }
     .presentationDetents([.medium, .large])
     .presentationDragIndicator(.visible)
+    .onDisappear(perform: savePendingChanges)
   }
 
   private var weightAccessibilityValue: String {
@@ -208,7 +212,22 @@ struct ExerciseSetPicker: View {
     }
   }
 
-  private func save() {
+  private func updateWholeWeight() {
+    enforceWeightLimit()
+    scheduleSave()
+  }
+
+  private func scheduleSave() {
+    hasPendingChanges = true
+    persistenceTask?.cancel()
+    persistenceTask = Task {
+      try? await Task.sleep(for: Self.persistenceDelay)
+      guard !Task.isCancelled else { return }
+      savePendingChanges()
+    }
+  }
+
+  private func applyChanges() {
     let halfSteps = wholeWeight * 2 + (usesHalfWeight ? 1 : 0)
 
     exerciseSet.kind = kind
@@ -216,13 +235,28 @@ struct ExerciseSetPicker: View {
     exerciseSet.weight = halfSteps == 0 ? nil : Decimal(halfSteps) / 2
     exerciseSet.weightUnit = halfSteps == 0 ? nil : weightUnit
     exerciseSet.workoutExercise?.workout?.updatedAt = .now
+  }
+
+  private func savePendingChanges() {
+    persistenceTask?.cancel()
+    persistenceTask = nil
+
+    guard hasPendingChanges else { return }
+
+    applyChanges()
 
     do {
       try modelContext.save()
-      dismiss()
+      hasPendingChanges = false
     } catch {
       errorMessage = activeWorkoutErrorMessage(for: error)
       isShowingError = true
     }
+  }
+
+  private func finish() {
+    savePendingChanges()
+    guard !hasPendingChanges else { return }
+    dismiss()
   }
 }

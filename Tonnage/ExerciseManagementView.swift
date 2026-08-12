@@ -98,6 +98,8 @@ struct ExerciseManagementView: View {
         } actions: {
           Button("Add Exercise", systemImage: "plus", action: addExercise)
             .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(.pink)
         }
       }
     }
@@ -288,8 +290,13 @@ private extension Exercise {
     case .perSide: "Per Side"
     }
     let originLabel = origin == .seeded ? "Built-in" : nil
+    let startingWeightLabel = startingWorkingWeight.flatMap { weight in
+      startingWorkingWeightUnit.map { unit in
+        "Starts at \(weight.formatted(.number.precision(.fractionLength(0...1)))) \(unit.displayAbbreviation)"
+      }
+    }
 
-    return [load, repetitions, originLabel]
+    return [load, repetitions, startingWeightLabel, originLabel]
       .compactMap { $0 }
       .joined(separator: " · ")
   }
@@ -315,6 +322,10 @@ func exerciseErrorMessage(for error: Error) -> String {
     "This exercise still has associated workout or template data."
   case .exerciseClassificationInUse:
     "Load and repetition tracking can’t be changed after sets have been logged."
+  case .invalidWeight:
+    "Enter a starting working weight greater than zero."
+  case .invalidWeightPrecision:
+    "Enter a starting working weight with no more than one decimal place."
   case .seededExerciseIsReadOnly:
     "Built-in exercises can’t be changed."
   default:

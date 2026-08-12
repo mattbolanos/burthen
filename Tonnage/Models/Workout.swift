@@ -194,6 +194,24 @@ final class Workout {
     return VolumeLoad(value: values.reduce(Decimal.zero, +), unit: unit)
   }
 
+  var templateExercisePlans: [TemplateExercisePlan] {
+    orderedExercises.compactMap { workoutExercise in
+      guard let exercise = workoutExercise.exercise else { return nil }
+
+      let currentWorkingSetCount = workoutExercise.exerciseSets.count {
+        $0.kind == .working
+      }
+      let plannedWorkingSetCount = currentWorkingSetCount > 0
+        ? currentWorkingSetCount
+        : workoutExercise.plannedWorkingSetCount ?? TrainingDefaults.workingSetCount
+
+      return TemplateExercisePlan(
+        exercise: exercise,
+        plannedWorkingSetCount: plannedWorkingSetCount
+      )
+    }
+  }
+
   func makeTemplate(
     named name: String,
     notes: String? = nil,
@@ -201,12 +219,10 @@ final class Workout {
   ) throws -> WorkoutTemplate {
     let template = try WorkoutTemplate(name: name, notes: notes, createdAt: date, updatedAt: date)
 
-    for workoutExercise in orderedExercises {
-      guard let exercise = workoutExercise.exercise else { continue }
-      let workingSetCount = workoutExercise.exerciseSets.count { $0.kind == .working }
+    for plan in templateExercisePlans {
       try template.addExercise(
-        exercise,
-        plannedWorkingSetCount: workingSetCount > 0 ? workingSetCount : nil,
+        plan.exercise,
+        plannedWorkingSetCount: plan.plannedWorkingSetCount,
         at: date
       )
     }

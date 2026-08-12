@@ -13,6 +13,8 @@ final class Exercise {
   var name: String = ""
   var loadMode: ExerciseLoadMode = ExerciseLoadMode.externalResistance
   var repetitionMode: ExerciseRepetitionMode = ExerciseRepetitionMode.standard
+  var startingWorkingWeight: Decimal?
+  var startingWorkingWeightUnit: WeightUnit?
   var origin: ExerciseOrigin = ExerciseOrigin.custom
   var isArchived = false
   var createdAt: Date = Date.now
@@ -29,6 +31,8 @@ final class Exercise {
     name: String,
     loadMode: ExerciseLoadMode,
     repetitionMode: ExerciseRepetitionMode = .standard,
+    startingWorkingWeight: Decimal? = nil,
+    startingWorkingWeightUnit: WeightUnit = .pounds,
     origin: ExerciseOrigin = .custom,
     isArchived: Bool = false,
     createdAt: Date = .now,
@@ -36,11 +40,16 @@ final class Exercise {
   ) throws {
     let normalizedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !normalizedName.isEmpty else { throw WorkoutModelError.emptyName }
+    try Self.validateStartingWorkingWeight(startingWorkingWeight)
 
     self.id = id
     self.name = normalizedName
     self.loadMode = loadMode
     self.repetitionMode = repetitionMode
+    self.startingWorkingWeight = startingWorkingWeight
+    self.startingWorkingWeightUnit = startingWorkingWeight == nil
+      ? nil
+      : startingWorkingWeightUnit
     self.origin = origin
     self.isArchived = isArchived
     self.createdAt = createdAt
@@ -72,6 +81,27 @@ final class Exercise {
     self.loadMode = loadMode
     self.repetitionMode = repetitionMode
     updatedAt = date
+  }
+
+  func updateStartingWorkingWeight(
+    _ weight: Decimal?,
+    unit: WeightUnit = .pounds,
+    at date: Date = .now
+  ) throws {
+    guard origin == .custom else { throw WorkoutModelError.seededExerciseIsReadOnly }
+    try Self.validateStartingWorkingWeight(weight)
+
+    startingWorkingWeight = weight
+    startingWorkingWeightUnit = weight == nil ? nil : unit
+    updatedAt = date
+  }
+
+  static func validateStartingWorkingWeight(_ weight: Decimal?) throws {
+    guard let weight else { return }
+    guard weight > 0 else { throw WorkoutModelError.invalidWeight }
+    guard weight.hasAtMostOneFractionalDigit else {
+      throw WorkoutModelError.invalidWeightPrecision
+    }
   }
 
   func archive(at date: Date = .now) throws {

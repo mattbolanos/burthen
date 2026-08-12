@@ -87,7 +87,9 @@ final class WorkoutExercise {
   }
 
   @discardableResult
-  func addDraftSet() throws -> ExerciseSet {
+  func addDraftSet(
+    defaultRepetitions: Int = TrainingDefaults.repetitionCount
+  ) throws -> ExerciseSet {
     guard exercise != nil else { throw WorkoutModelError.missingExercise }
 
     let previousSet = orderedSets.last
@@ -99,7 +101,7 @@ final class WorkoutExercise {
     let exerciseSet = ExerciseSet(
       position: nextSetPosition,
       kind: .working,
-      reps: max(previousSet?.reps ?? 1, 1),
+      reps: max(previousSet?.reps ?? defaultRepetitions, 1),
       weight: previousWeight,
       weightUnit: previousWeight == nil ? nil : weightUnit,
       completedAt: nil,

@@ -268,6 +268,51 @@ struct TonnageTests {
   }
 
   @Test
+  func workoutTemplatePlansPreserveOrderAndCurrentWorkingSetCounts() throws {
+    let benchPress = try Exercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let pullUp = try Exercise(name: "Pull-up", loadMode: .bodyweight)
+    let workout = try Workout()
+    let benchEntry = try workout.addExercise(
+      benchPress,
+      plannedWorkingSetCount: 5
+    )
+    _ = try workout.addExercise(
+      pullUp,
+      plannedWorkingSetCount: 4
+    )
+    try benchEntry.addSet(reps: 10, weight: 45, weightUnit: .pounds)
+    try benchEntry.addSet(reps: 8, weight: 50, weightUnit: .pounds)
+    try benchEntry.addSet(
+      kind: .warmup,
+      reps: 10,
+      weight: 20,
+      weightUnit: .pounds
+    )
+
+    let plans = workout.templateExercisePlans
+
+    #expect(plans.map(\.exercise.name) == ["Bench Press", "Pull-up"])
+    #expect(plans.map(\.plannedWorkingSetCount) == [2, 4])
+  }
+
+  @Test
+  func blankWorkoutTemplateSeedUsesTheSharedWorkingSetDefault() throws {
+    let squat = try Exercise(name: "Squat", loadMode: .externalResistance)
+    let pullUp = try Exercise(name: "Pull-up", loadMode: .bodyweight)
+
+    let seed = WorkoutTemplateSeed(exercises: [squat, pullUp])
+
+    #expect(seed.exercisePlans.map(\.exercise.name) == ["Squat", "Pull-up"])
+    #expect(
+      seed.exercisePlans.map(\.plannedWorkingSetCount)
+        == [TrainingDefaults.workingSetCount, TrainingDefaults.workingSetCount]
+    )
+  }
+
+  @Test
   func storeEnforcesOneActiveWorkoutAndUniqueActiveNames() throws {
     let container = try makeContainer()
     let store = TrainingDataStore(modelContext: container.mainContext)
@@ -510,6 +555,39 @@ struct TonnageTests {
   }
 
   @Test
+  func exerciseStoresAndUpdatesAnOptionalStartingWorkingWeight() throws {
+    let container = try makeContainer()
+    let store = TrainingDataStore(modelContext: container.mainContext)
+    let exercise = try store.createExercise(
+      name: "Goblet Squat",
+      loadMode: .externalResistance,
+      startingWorkingWeight: 24,
+      startingWorkingWeightUnit: .kilograms
+    )
+    let updateDate = Date(timeIntervalSince1970: 2_000)
+
+    try store.updateExercise(
+      exercise,
+      name: exercise.name,
+      loadMode: exercise.loadMode,
+      repetitionMode: exercise.repetitionMode,
+      startingWorkingWeight: 55,
+      startingWorkingWeightUnit: .pounds,
+      at: updateDate
+    )
+
+    #expect(exercise.startingWorkingWeight == 55)
+    #expect(exercise.startingWorkingWeightUnit == .pounds)
+    #expect(exercise.updatedAt == updateDate)
+    #expect(throws: WorkoutModelError.invalidWeight) {
+      try exercise.updateStartingWorkingWeight(0)
+    }
+    #expect(throws: WorkoutModelError.invalidWeightPrecision) {
+      try exercise.updateStartingWorkingWeight(Decimal(string: "42.25"))
+    }
+  }
+
+  @Test
   func duplicateExerciseRenameDoesNotPartiallyUpdate() throws {
     let container = try makeContainer()
     let store = TrainingDataStore(modelContext: container.mainContext)
@@ -666,7 +744,37 @@ struct TonnageTests {
 
     #expect(entry.orderedSets.count == 3)
     #expect(entry.orderedSets.map(\.position) == [0, 1, 2])
+    #expect(
+      entry.orderedSets.allSatisfy {
+        $0.reps == TrainingDefaults.repetitionCount
+      }
+    )
     #expect(entry.orderedSets.allSatisfy { $0.completedAt == nil })
+  }
+
+  @Test
+  func preparingAWorkoutUsesTheExerciseStartingWorkingWeight() throws {
+    let container = try makeContainer()
+    let context = container.mainContext
+    let store = TrainingDataStore(modelContext: context)
+    let benchPress = try store.createExercise(
+      name: "Bench Press",
+      loadMode: .externalResistance,
+      startingWorkingWeight: Decimal(string: "62.5"),
+      startingWorkingWeightUnit: .kilograms
+    )
+    let workout = try store.startWorkout()
+    let entry = try workout.addExercise(
+      benchPress,
+      plannedWorkingSetCount: 4
+    )
+
+    try store.prepareForEditing(workout)
+
+    #expect(entry.weightUnit == .kilograms)
+    #expect(entry.orderedSets.count == 4)
+    #expect(entry.orderedSets.allSatisfy { $0.weight == Decimal(string: "62.5") })
+    #expect(entry.orderedSets.allSatisfy { $0.weightUnit == .kilograms })
   }
 
   @Test
@@ -685,7 +793,83 @@ struct TonnageTests {
     #expect(entry.orderedSets.count == 3)
     #expect(entry.orderedSets.map(\.position) == [0, 1, 2])
     #expect(entry.orderedSets.allSatisfy { $0.kind == .working })
+    #expect(
+      entry.orderedSets.allSatisfy {
+        $0.reps == TrainingDefaults.repetitionCount
+      }
+    )
     #expect(entry.orderedSets.allSatisfy { $0.completedAt == nil })
+  }
+
+  @Test
+  func latestCompletedWorkingRepetitionsPrefillAllDraftSets() throws {
+    let container = try makeContainer()
+    let store = TrainingDataStore(modelContext: container.mainContext)
+    let pushUp = try store.createExercise(
+      name: "Push-up",
+      loadMode: .bodyweight
+    )
+
+    let completedWorkout = try store.startWorkout(
+      startedAt: Date(timeIntervalSince1970: 1_000)
+    )
+    let completedEntry = try store.addExercise(
+      pushUp,
+      to: completedWorkout
+    )
+    completedEntry.orderedSets[0].reps = 8
+    completedEntry.orderedSets[1].reps = 9
+    completedEntry.orderedSets[2].kind = .warmup
+    completedEntry.orderedSets[2].reps = 20
+    try completedWorkout.complete(at: Date(timeIntervalSince1970: 2_000))
+
+    let activeWorkout = try store.startWorkout(
+      startedAt: Date(timeIntervalSince1970: 3_000)
+    )
+    let activeEntry = try store.addExercise(pushUp, to: activeWorkout)
+
+    #expect(activeEntry.orderedSets.allSatisfy { $0.reps == 9 })
+  }
+
+  @Test
+  func latestCompletedWorkingWeightOverridesTheExerciseStartingWeight() throws {
+    let container = try makeContainer()
+    let store = TrainingDataStore(modelContext: container.mainContext)
+    let benchPress = try store.createExercise(
+      name: "Bench Press",
+      loadMode: .externalResistance,
+      startingWorkingWeight: 45,
+      startingWorkingWeightUnit: .kilograms
+    )
+
+    let firstWorkout = try store.startWorkout(
+      startedAt: Date(timeIntervalSince1970: 1_000)
+    )
+    let firstEntry = try store.addExercise(benchPress, to: firstWorkout)
+    for exerciseSet in firstEntry.orderedSets {
+      exerciseSet.weight = 100
+      exerciseSet.weightUnit = .pounds
+    }
+    try firstWorkout.complete(at: Date(timeIntervalSince1970: 2_000))
+
+    let secondWorkout = try store.startWorkout(
+      startedAt: Date(timeIntervalSince1970: 3_000)
+    )
+    let secondEntry = try store.addExercise(benchPress, to: secondWorkout)
+    secondEntry.orderedSets[0].weight = 120
+    secondEntry.orderedSets[1].weight = 125
+    secondEntry.orderedSets[2].kind = .warmup
+    secondEntry.orderedSets[2].weight = 40
+    try secondWorkout.complete(at: Date(timeIntervalSince1970: 4_000))
+
+    let activeWorkout = try store.startWorkout(
+      startedAt: Date(timeIntervalSince1970: 5_000)
+    )
+    let activeEntry = try store.addExercise(benchPress, to: activeWorkout)
+
+    #expect(activeEntry.weightUnit == .pounds)
+    #expect(activeEntry.orderedSets.allSatisfy { $0.weight == 125 })
+    #expect(activeEntry.orderedSets.allSatisfy { $0.weightUnit == .pounds })
   }
 
   @Test

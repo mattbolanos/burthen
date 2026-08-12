@@ -3,11 +3,18 @@
 //  Tonnage
 //
 
+import SwiftData
 import SwiftUI
 
 struct HomeView: View {
+  @Query private var templates: [WorkoutTemplate]
+
+  @Binding var navigationPath: [NewWorkoutRoute]
+
   let workouts: [Workout]
   let resumeActiveWorkout: () -> Void
+
+  @State private var isCreatingTemplate = false
 
   private var activeWorkout: Workout? {
     workouts.first { $0.status == .inProgress }
@@ -19,11 +26,15 @@ struct HomeView: View {
       .sorted(by: isMoreRecentlyCompleted)
   }
 
+  private var hasActiveTemplates: Bool {
+    templates.contains { !$0.isArchived }
+  }
+
   var body: some View {
     let activeWorkout = activeWorkout
     let completedWorkouts = completedWorkouts
 
-    NavigationStack {
+    NavigationStack(path: $navigationPath) {
       List {
         if let activeWorkout {
           Section {
@@ -63,8 +74,16 @@ struct HomeView: View {
             NavigationLink(value: NewWorkoutRoute.blank) {
               Label("Blank Workout", systemImage: "doc")
             }
-            NavigationLink(value: NewWorkoutRoute.templates) {
-              Label("Choose a Template", systemImage: "rectangle.stack")
+            if !hasActiveTemplates {
+              Button(
+                "Create a Template",
+                systemImage: "rectangle.stack.badge.plus",
+                action: createTemplate
+              )
+            } else {
+              NavigationLink(value: NewWorkoutRoute.templates) {
+                Label("Choose a Template", systemImage: "rectangle.stack")
+              }
             }
           }
           .disabled(activeWorkout != nil)
@@ -83,7 +102,14 @@ struct HomeView: View {
           WorkoutTemplatePickerView()
         }
       }
+      .sheet(isPresented: $isCreatingTemplate) {
+        AddWorkoutTemplateView(offersWorkoutStart: true)
+      }
     }
+  }
+
+  private func createTemplate() {
+    isCreatingTemplate = true
   }
 
   private func isMoreRecentlyCompleted(_ lhs: Workout, _ rhs: Workout) -> Bool {
@@ -174,5 +200,12 @@ private struct CompletedWorkoutRow: View {
 }
 
 #Preview {
-  HomeView(workouts: [], resumeActiveWorkout: {})
+  @Previewable @State var navigationPath: [NewWorkoutRoute] = []
+
+  HomeView(
+    navigationPath: $navigationPath,
+    workouts: [],
+    resumeActiveWorkout: {}
+  )
+    .modelContainer(for: TonnageSchema.models, inMemory: true)
 }

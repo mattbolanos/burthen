@@ -13,6 +13,7 @@ struct ContentView: View {
   private var workouts: [Workout]
 
   @State private var selection = AppTab.home
+  @State private var homeNavigationPath: [NewWorkoutRoute] = []
 
   private var activeWorkout: Workout? {
     workouts.first { $0.status == .inProgress }
@@ -42,6 +43,7 @@ struct ContentView: View {
 
       Tab("Home", systemImage: "house", value: AppTab.home) {
         HomeView(
+          navigationPath: $homeNavigationPath,
           workouts: workouts,
           resumeActiveWorkout: showActiveWorkout
         )
@@ -70,7 +72,7 @@ struct ContentView: View {
     if newID != nil {
       selection = .activeWorkout
     } else if selection == .activeWorkout {
-      selection = .home
+      showHome()
     }
   }
 
@@ -80,6 +82,7 @@ struct ContentView: View {
   }
 
   private func showHome() {
+    homeNavigationPath.removeAll()
     selection = .home
   }
 }

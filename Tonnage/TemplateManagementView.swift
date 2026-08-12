@@ -100,7 +100,9 @@ struct TemplateManagementView: View {
           Text("Build a reusable workout from your exercises.")
         } actions: {
           Button("Add Template", systemImage: "plus", action: addTemplate)
-            .buttonStyle(.glassProminent)
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(.pink)
         }
       }
     }

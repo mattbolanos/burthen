@@ -12,15 +12,15 @@ struct SettingsView: View {
       Form {
         Section {
           NavigationLink {
-            TemplateManagementView()
-          } label: {
-            Text("Workout Templates")
-          }
-
-          NavigationLink {
             ExerciseManagementView()
           } label: {
             Text("Exercises")
+          }
+
+          NavigationLink {
+            TemplateManagementView()
+          } label: {
+            Text("Workout Templates")
           }
         }
       }

@@ -10,22 +10,14 @@ struct BlankWorkoutView: View {
   @Environment(\.modelContext) private var modelContext
 
   @State private var exercises: [BlankWorkoutExerciseDraft] = []
-  @State private var isSelectingExercises = false
-  @State private var isAddingExercise = false
+  @State private var presentedSheet: BlankWorkoutSheet?
   @State private var isShowingError = false
   @State private var errorMessage = ""
 
   var body: some View {
     List {
-      Section {
-        if exercises.isEmpty {
-          BlankWorkoutEmptyState(
-            createExercise: addExercise,
-            chooseExercises: selectExercises
-          )
-          .listRowSeparator(.hidden)
-          .listRowBackground(Color.clear)
-        } else {
+      if !exercises.isEmpty {
+        Section {
           ForEach(exercises) { draft in
             BlankWorkoutExerciseRow(exercise: draft.exercise)
               .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -41,27 +33,27 @@ struct BlankWorkoutView: View {
           }
           .onDelete(perform: removeExercises)
           .onMove(perform: moveExercises)
+        } header: {
+          SectionHeader("Exercises")
         }
-      } header: {
-        SectionHeader("Exercises")
-      }
 
-      Button(action: startWorkout) {
-        Text("Start Workout")
-          .font(.headline)
-          .frame(maxWidth: .infinity)
+        BlankWorkoutActions(
+          saveTemplate: presentTemplateEditor,
+          startWorkout: startWorkout
+        )
+        .listRowInsets(.init())
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
       }
-      .buttonStyle(.glassProminent)
-      .controlSize(.large)
-      .disabled(exercises.isEmpty)
-      .listRowInsets(.init())
-      .listRowSeparator(.hidden)
-      .listRowBackground(Color.clear)
-      .accessibilityHint(
-        exercises.isEmpty
-          ? "Add at least one exercise first."
-          : "Starts a workout with these exercises."
-      )
+    }
+    .overlay {
+      if exercises.isEmpty {
+        BlankWorkoutEmptyState(
+          createExercise: addExercise,
+          chooseExercises: selectExercises
+        )
+        .padding(.horizontal, LayoutMetrics.Padding.horizontalContent)
+      }
     }
     .navigationTitle("Blank Workout")
     .navigationBarTitleDisplayMode(.inline)
@@ -77,11 +69,15 @@ struct BlankWorkoutView: View {
         }
       }
     }
-    .sheet(isPresented: $isSelectingExercises) {
-      BlankWorkoutExercisePicker(exercises: $exercises)
-    }
-    .sheet(isPresented: $isAddingExercise) {
-      AddExerciseView(onAdd: appendExercise)
+    .sheet(item: $presentedSheet) { sheet in
+      switch sheet {
+      case .exercisePicker:
+        BlankWorkoutExercisePicker(exercises: $exercises)
+      case .newExercise:
+        AddExerciseView(onAdd: appendExercise)
+      case .template(let seed):
+        AddWorkoutTemplateView(seed: seed)
+      }
     }
     .alert("Workout Couldn’t Be Started", isPresented: $isShowingError) {
       Button("OK", role: .cancel) {}
@@ -91,11 +87,11 @@ struct BlankWorkoutView: View {
   }
 
   private func selectExercises() {
-    isSelectingExercises = true
+    presentedSheet = .exercisePicker
   }
 
   private func addExercise() {
-    isAddingExercise = true
+    presentedSheet = .newExercise
   }
 
   private func appendExercise(_ exercise: Exercise) {
@@ -112,6 +108,12 @@ struct BlankWorkoutView: View {
 
   private func moveExercises(from offsets: IndexSet, to destination: Int) {
     exercises.move(fromOffsets: offsets, toOffset: destination)
+  }
+
+  private func presentTemplateEditor() {
+    presentedSheet = .template(
+      WorkoutTemplateSeed(exercises: exercises.map(\.exercise))
+    )
   }
 
   private func startWorkout() {
@@ -132,37 +134,98 @@ struct BlankWorkoutView: View {
   }
 }
 
+private enum BlankWorkoutSheet: Identifiable {
+  case exercisePicker
+  case newExercise
+  case template(WorkoutTemplateSeed)
+
+  var id: String {
+    switch self {
+    case .exercisePicker:
+      "exercise-picker"
+    case .newExercise:
+      "new-exercise"
+    case .template(let seed):
+      "template-\(seed.id)"
+    }
+  }
+}
+
+private struct BlankWorkoutActions: View {
+  let saveTemplate: () -> Void
+  let startWorkout: () -> Void
+
+  var body: some View {
+    GlassEffectContainer(spacing: LayoutMetrics.Spacing.small) {
+      VStack(spacing: LayoutMetrics.Spacing.small) {
+        Button(action: saveTemplate) {
+          Label(
+            "Save as Template",
+            systemImage: "rectangle.stack.badge.plus"
+          )
+          .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.glass)
+        .controlSize(.large)
+        .accessibilityHint(
+          "Creates a reusable template from these exercises."
+        )
+
+        Button(action: startWorkout) {
+          Text("Start Workout")
+            .font(.headline)
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.glassProminent)
+        .controlSize(.large)
+        .accessibilityHint("Starts a workout with these exercises.")
+      }
+    }
+  }
+}
+
 private struct BlankWorkoutEmptyState: View {
   let createExercise: () -> Void
   let chooseExercises: () -> Void
 
   var body: some View {
-    VStack(spacing: LayoutMetrics.Spacing.large) {
-      ContentUnavailableView {
-        Label("No Exercises Yet", systemImage: "dumbbell")
-      } description: {
-        Text("Create a new exercise or add existing ones from your library.")
-      }
-
-      GlassEffectContainer(spacing: LayoutMetrics.Spacing.small) {
+    ContentUnavailableView {
+      Label("No Exercises Yet", systemImage: "dumbbell")
+    } description: {
+      Text("Create a new exercise or add existing ones from your library.")
+    } actions: {
+      ViewThatFits(in: .horizontal) {
         HStack(spacing: LayoutMetrics.Spacing.small) {
+          Button("New Exercise", action: createExercise)
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(.pink)
+            .fixedSize(horizontal: true, vertical: false)
+
+          Button("Add Existing", action: chooseExercises)
+            .buttonStyle(.bordered)
+            .controlSize(.large)
+            .fixedSize(horizontal: true, vertical: false)
+        }
+
+        VStack(spacing: LayoutMetrics.Spacing.small) {
           Button(action: createExercise) {
             Text("New Exercise")
               .frame(maxWidth: .infinity)
           }
-          .buttonStyle(.glassProminent)
+          .buttonStyle(.borderedProminent)
           .controlSize(.large)
+          .tint(.pink)
 
           Button(action: chooseExercises) {
             Text("Add Existing")
               .frame(maxWidth: .infinity)
           }
-          .buttonStyle(.glass)
+          .buttonStyle(.bordered)
           .controlSize(.large)
         }
       }
     }
-    .padding(.vertical, LayoutMetrics.Spacing.large)
   }
 }
 
@@ -193,19 +256,33 @@ private struct BlankWorkoutExercisePicker: View {
 
   var body: some View {
     NavigationStack {
-      List(filteredExercises) { exercise in
-        Button {
-          toggleSelection(of: exercise)
-        } label: {
-          BlankWorkoutExercisePickerRow(
-            exercise: exercise,
-            isAlreadyAdded: existingExerciseIDs.contains(exercise.id),
-            isSelected: selectedExerciseIDs.contains(exercise.id)
-          )
+      List {
+        if !filteredExercises.isEmpty {
+          Section {
+            Button(
+              "New Exercise",
+              systemImage: "plus",
+              action: addExercise
+            )
+          }
+
+          Section {
+            ForEach(filteredExercises) { exercise in
+              Button {
+                toggleSelection(of: exercise)
+              } label: {
+                BlankWorkoutExercisePickerRow(
+                  exercise: exercise,
+                  isAlreadyAdded: existingExerciseIDs.contains(exercise.id),
+                  isSelected: selectedExerciseIDs.contains(exercise.id)
+                )
+              }
+              .buttonStyle(.plain)
+              .disabled(existingExerciseIDs.contains(exercise.id))
+              .accessibilityValue(accessibilityValue(for: exercise))
+            }
+          }
         }
-        .buttonStyle(.plain)
-        .disabled(existingExerciseIDs.contains(exercise.id))
-        .accessibilityValue(accessibilityValue(for: exercise))
       }
       .overlay {
         if activeExercises.isEmpty {
@@ -213,26 +290,33 @@ private struct BlankWorkoutExercisePicker: View {
             Label("No Exercises", systemImage: "dumbbell")
           } description: {
             Text("Create an exercise to add it to this workout.")
+          } actions: {
+            Button("New Exercise", systemImage: "plus", action: addExercise)
+              .buttonStyle(.borderedProminent)
+              .controlSize(.large)
+              .tint(.pink)
           }
         } else if filteredExercises.isEmpty {
-          ContentUnavailableView.search
+          ContentUnavailableView {
+            Label("No Results", systemImage: "magnifyingglass")
+          } description: {
+            Text("No exercises match “\(searchText)”.")
+          } actions: {
+            Button("New Exercise", systemImage: "plus", action: addExercise)
+              .buttonStyle(.borderedProminent)
+              .controlSize(.large)
+              .tint(.pink)
+          }
         }
       }
       .searchable(text: $searchText, prompt: "Search Exercises")
-      .navigationTitle("Add Exercises")
+      .navigationTitle("Exercises")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
           Button("Cancel", action: dismiss.callAsFunction)
         }
-        ToolbarItemGroup(placement: .confirmationAction) {
-          Button(
-            "New Exercise",
-            systemImage: "plus",
-            action: addExercise
-          )
-          .labelStyle(.iconOnly)
-
+        ToolbarItem(placement: .confirmationAction) {
           Button("Add", action: addSelectedExercises)
             .disabled(selectedExerciseIDs.isEmpty)
         }

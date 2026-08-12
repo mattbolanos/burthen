@@ -31,6 +31,11 @@ enum ExerciseSetKind: String, Codable, CaseIterable {
   case warmup
 }
 
+enum TrainingDefaults {
+  static let workingSetCount = 3
+  static let repetitionCount = 10
+}
+
 enum WeightUnit: String, Codable, CaseIterable {
   // Keep these raw values stable for persisted data; UI copy lives below.
   case pounds = "lb"

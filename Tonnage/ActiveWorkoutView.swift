@@ -28,7 +28,7 @@ private struct ActiveWorkoutEditor: View {
   let workout: Workout
   let onDiscard: () -> Void
 
-  @State private var isSelectingExercise = false
+  @State private var presentedSheet: ActiveWorkoutSheet?
   @State private var isConfirmingWorkoutEnd = false
   @State private var isShowingError = false
   @State private var errorMessage = ""
@@ -90,8 +90,23 @@ private struct ActiveWorkoutEditor: View {
     .navigationTitle("Active Workout")
     .navigationBarTitleDisplayMode(.large)
     .toolbar {
+      ToolbarItem(placement: .topBarLeading) {
+        Menu("More", systemImage: "ellipsis") {
+          Button(
+            "Save as New Template",
+            systemImage: "rectangle.stack.badge.plus",
+            action: presentTemplateEditor
+          )
+          .disabled(workout.orderedExercises.isEmpty)
+        }
+        .accessibilityHint(
+          "Contains options for this workout."
+        )
+      }
+
       ToolbarItemGroup(placement: .topBarTrailing) {
         EditButton()
+
         Button(
           "Add Exercise",
           systemImage: "plus",
@@ -99,8 +114,13 @@ private struct ActiveWorkoutEditor: View {
         )
       }
     }
-    .sheet(isPresented: $isSelectingExercise) {
-      WorkoutExercisePicker(workout: workout)
+    .sheet(item: $presentedSheet) { sheet in
+      switch sheet {
+      case .exercisePicker:
+        WorkoutExercisePicker(workout: workout)
+      case .template(let seed):
+        AddWorkoutTemplateView(seed: seed)
+      }
     }
     .alert("Workout Couldn’t Be Updated", isPresented: $isShowingError) {
       Button("OK", role: .cancel) {}
@@ -111,7 +131,11 @@ private struct ActiveWorkoutEditor: View {
   }
 
   private func presentExercisePicker() {
-    isSelectingExercise = true
+    presentedSheet = .exercisePicker
+  }
+
+  private func presentTemplateEditor() {
+    presentedSheet = .template(WorkoutTemplateSeed(workout: workout))
   }
 
   private func requestWorkoutEnd() {
@@ -185,6 +209,20 @@ private struct ActiveWorkoutEditor: View {
   }
 }
 
+private enum ActiveWorkoutSheet: Identifiable {
+  case exercisePicker
+  case template(WorkoutTemplateSeed)
+
+  var id: String {
+    switch self {
+    case .exercisePicker:
+      "exercise-picker"
+    case .template(let seed):
+      "template-\(seed.id)"
+    }
+  }
+}
+
 private struct ActiveWorkoutHeader: View {
   let workout: Workout
 
@@ -244,6 +282,8 @@ private struct ActiveWorkoutEmptyState: View {
     } actions: {
       Button("Add Exercise", systemImage: "plus", action: addExercise)
         .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+        .tint(.pink)
     }
     .listRowSeparator(.hidden)
     .listRowBackground(Color.clear)

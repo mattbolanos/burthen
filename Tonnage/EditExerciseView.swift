@@ -16,6 +16,8 @@ struct EditExerciseView: View {
   @State private var name: String
   @State private var loadMode: ExerciseLoadMode
   @State private var repetitionMode: ExerciseRepetitionMode
+  @State private var startingWorkingWeightText: String
+  @State private var startingWorkingWeightUnit: WeightUnit
   @State private var isShowingError = false
   @State private var errorMessage = ""
 
@@ -24,6 +26,14 @@ struct EditExerciseView: View {
     _name = State(initialValue: exercise.name)
     _loadMode = State(initialValue: exercise.loadMode)
     _repetitionMode = State(initialValue: exercise.repetitionMode)
+    _startingWorkingWeightText = State(
+      initialValue: StartingWorkingWeightInput.text(
+        for: exercise.startingWorkingWeight
+      )
+    )
+    _startingWorkingWeightUnit = State(
+      initialValue: exercise.startingWorkingWeightUnit ?? .pounds
+    )
   }
 
   private var isReadOnly: Bool {
@@ -35,14 +45,23 @@ struct EditExerciseView: View {
   }
 
   private var hasChanges: Bool {
-    name.trimmingCharacters(in: .whitespacesAndNewlines) != exercise.name
+    let startingWorkingWeight = StartingWorkingWeightInput.value(
+      from: startingWorkingWeightText
+    )
+
+    return name.trimmingCharacters(in: .whitespacesAndNewlines) != exercise.name
       || loadMode != exercise.loadMode
       || repetitionMode != exercise.repetitionMode
+      || startingWorkingWeight != exercise.startingWorkingWeight
+      || (startingWorkingWeight != nil
+        && startingWorkingWeightUnit
+          != (exercise.startingWorkingWeightUnit ?? .pounds))
   }
 
   private var canSave: Bool {
     !isReadOnly
       && !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      && StartingWorkingWeightInput.isValid(startingWorkingWeightText)
       && hasChanges
   }
 
@@ -80,6 +99,12 @@ struct EditExerciseView: View {
         }
       }
       .disabled(isClassificationLocked)
+
+      StartingWorkingWeightSection(
+        weightText: $startingWorkingWeightText,
+        weightUnit: $startingWorkingWeightUnit
+      )
+      .disabled(isReadOnly)
     }
     .navigationTitle(isReadOnly ? "Exercise Details" : "Edit Exercise")
     .navigationBarTitleDisplayMode(.inline)
@@ -104,7 +129,11 @@ struct EditExerciseView: View {
         exercise,
         name: name,
         loadMode: loadMode,
-        repetitionMode: repetitionMode
+        repetitionMode: repetitionMode,
+        startingWorkingWeight: StartingWorkingWeightInput.value(
+          from: startingWorkingWeightText
+        ),
+        startingWorkingWeightUnit: startingWorkingWeightUnit
       )
       try modelContext.save()
       dismiss()

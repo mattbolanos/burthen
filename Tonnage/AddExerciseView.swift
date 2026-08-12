@@ -16,11 +16,14 @@ struct AddExerciseView: View {
   @State private var name = ""
   @State private var loadMode = ExerciseLoadMode.externalResistance
   @State private var repetitionMode = ExerciseRepetitionMode.standard
+  @State private var startingWorkingWeightText = ""
+  @State private var startingWorkingWeightUnit = WeightUnit.pounds
   @State private var isShowingError = false
   @State private var errorMessage = ""
 
   private var canSave: Bool {
     !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      && StartingWorkingWeightInput.isValid(startingWorkingWeightText)
   }
 
   init(onAdd: @escaping (Exercise) -> Void = { _ in }) {
@@ -54,6 +57,11 @@ struct AddExerciseView: View {
         } header: {
           SectionHeader("Tracking")
         }
+
+        StartingWorkingWeightSection(
+          weightText: $startingWorkingWeightText,
+          weightUnit: $startingWorkingWeightUnit
+        )
       }
       .navigationTitle("New Exercise")
       .navigationBarTitleDisplayMode(.inline)
@@ -62,12 +70,12 @@ struct AddExerciseView: View {
           Button("Cancel", action: dismiss.callAsFunction)
         }
         ToolbarItem(placement: .confirmationAction) {
-          Button("Add", action: save)
+          Button("Create", action: save)
             .disabled(!canSave)
         }
       }
       .alert("Exercise Couldn’t Be Added", isPresented: $isShowingError) {
-        Button("OK", role: .cancel) { }
+        Button("OK", role: .cancel) {}
       } message: {
         Text(errorMessage)
       }
@@ -79,7 +87,11 @@ struct AddExerciseView: View {
       let exercise = try TrainingDataStore(modelContext: modelContext).createExercise(
         name: name,
         loadMode: loadMode,
-        repetitionMode: repetitionMode
+        repetitionMode: repetitionMode,
+        startingWorkingWeight: StartingWorkingWeightInput.value(
+          from: startingWorkingWeightText
+        ),
+        startingWorkingWeightUnit: startingWorkingWeightUnit
       )
       try modelContext.save()
       onAdd(exercise)
