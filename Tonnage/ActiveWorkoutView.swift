@@ -249,19 +249,15 @@ private struct ActiveWorkoutHeader: View {
           .foregroundStyle(.secondary)
       }
 
-      LabeledContent {
-        Text(
-          timerInterval: workout.startedAt...Date.distantFuture,
-          countsDown: false,
-          showsHours: true
-        )
-        .font(.title2.weight(.semibold))
-        .monospacedDigit()
-        .foregroundStyle(.primary)
-      } label: {
-        Label("Elapsed", systemImage: "timer")
-          .foregroundStyle(.secondary)
-      }
+      Text(
+        timerInterval: workout.startedAt...Date.distantFuture,
+        countsDown: false,
+        showsHours: true
+      )
+      .font(.title2.weight(.semibold))
+      .monospacedDigit()
+      .foregroundStyle(.primary)
+
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.vertical, LayoutMetrics.Spacing.small)
@@ -436,5 +432,5 @@ func activeWorkoutErrorMessage(for error: Error) -> String {
     ),
     onDiscard: {}
   )
-    .modelContainer(for: TonnageSchema.models, inMemory: true)
+  .modelContainer(for: TonnageSchema.models, inMemory: true)
 }
