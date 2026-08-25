@@ -48,7 +48,8 @@ struct ExerciseCard: View {
 
         Spacer(minLength: LayoutMetrics.Spacing.small)
 
-        TrainingLoadCompactMetric(load: exercise.volumeLoad)
+        TrainingLoadText(load: exercise.volumeLoad)
+          .font(.subheadline.weight(.semibold))
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .contentShape(.rect)

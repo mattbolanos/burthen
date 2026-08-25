@@ -26,7 +26,8 @@ struct CompletedWorkoutExerciseCard: View {
 
         Spacer(minLength: LayoutMetrics.Spacing.small)
 
-        TrainingLoadCompactMetric(load: workoutExercise.volumeLoad)
+        TrainingLoadText(load: workoutExercise.volumeLoad)
+          .font(.subheadline.weight(.semibold))
       }
 
       if orderedSets.isEmpty {

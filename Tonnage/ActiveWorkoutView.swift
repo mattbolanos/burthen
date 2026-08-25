@@ -293,18 +293,7 @@ private struct ActiveWorkoutHeader: View {
           .foregroundStyle(.secondary)
       }
 
-      Text(
-        timerInterval: workout.startedAt...Date.distantFuture,
-        countsDown: false,
-        showsHours: true
-      )
-      .font(.title2.weight(.semibold))
-      .monospacedDigit()
-      .foregroundStyle(.primary)
-
-      TrainingLoadMetricCard(
-        load: workout.volumeLoad
-      )
+      ActiveWorkoutStats(workout: workout)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.vertical, LayoutMetrics.Spacing.small)

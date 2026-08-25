@@ -50,16 +50,21 @@ struct WorkoutActivityWidget: Widget {
           )
         }
       } compactLeading: {
-        Image(systemName: "dumbbell.fill")
-          .foregroundStyle(.pink)
+        TonnageActivityIcon()
       } compactTrailing: {
         CompactWorkoutDuration(startedAt: context.attributes.startedAt)
           .foregroundStyle(.pink)
       } minimal: {
-        Image(systemName: "dumbbell.fill")
-          .foregroundStyle(.pink)
+        TonnageActivityIcon()
       }
     }
+  }
+}
+
+private struct TonnageActivityIcon: View {
+  var body: some View {
+    Image("TonnageActivityIcon")
+      .accessibilityLabel("Tonnage")
   }
 }
 

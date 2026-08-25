@@ -30,13 +30,6 @@ struct ActiveWorkoutExerciseView: View {
     let orderedSets = workoutExercise.orderedSets
 
     List {
-      TrainingLoadMetricCard(
-        load: workoutExercise.volumeLoad
-      )
-      .listRowInsets(LayoutMetrics.Insets.cardRow)
-      .listRowSeparator(.hidden)
-      .listRowBackground(Color.clear)
-
       Section {
         Picker("Weight Unit", selection: $weightUnit) {
           ForEach(WeightUnit.allCases, id: \.self) { unit in

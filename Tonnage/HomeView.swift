@@ -164,8 +164,6 @@ private struct ActiveWorkoutRow: View {
         )
         .font(.subheadline)
         .foregroundStyle(.secondary)
-
-        TrainingLoadInlineMetric(load: workout.volumeLoad)
       }
 
       Spacer(minLength: LayoutMetrics.Spacing.small)
@@ -194,8 +192,6 @@ private struct CompletedWorkoutRow: View {
   let workout: Workout
 
   var body: some View {
-    let volumeLoad = workout.volumeLoad
-
     HStack(alignment: .top, spacing: LayoutMetrics.Spacing.medium) {
       VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
         Text(workout.displayName)
@@ -217,15 +213,8 @@ private struct CompletedWorkoutRow: View {
 
       Spacer(minLength: LayoutMetrics.Spacing.small)
 
-      Text(volumeLoad?.formattedValue ?? "—")
+      TrainingLoadText(load: workout.volumeLoad)
         .font(.headline)
-        .monospacedDigit()
-        .foregroundStyle(volumeLoad == nil ? Color.secondary : Color.pink)
-        .lineLimit(1)
-        .minimumScaleFactor(0.8)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Training load")
-        .accessibilityValue(volumeLoad?.accessibilityText ?? "Not available")
     }
     .frame(
       maxWidth: .infinity,
@@ -246,5 +235,5 @@ private struct CompletedWorkoutRow: View {
     workouts: [],
     resumeActiveWorkout: {}
   )
-    .modelContainer(for: TonnageSchema.models, inMemory: true)
+  .modelContainer(for: TonnageSchema.models, inMemory: true)
 }

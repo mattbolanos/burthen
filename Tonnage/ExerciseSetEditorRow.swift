@@ -38,7 +38,8 @@ struct ExerciseSetEditorRow: View {
 
         Spacer(minLength: LayoutMetrics.Spacing.small)
 
-        TrainingLoadCompactMetric(load: setVolumeLoad)
+        TrainingLoadText(load: setVolumeLoad)
+          .font(.subheadline.weight(.semibold))
 
         Image(systemName: "chevron.forward")
           .font(.caption.weight(.semibold))

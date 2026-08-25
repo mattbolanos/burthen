@@ -31,6 +31,9 @@ struct CompletedWorkoutSetRow: View {
       }
 
       Spacer(minLength: LayoutMetrics.Spacing.small)
+
+      TrainingLoadText(load: exerciseSet.volumeLoad)
+        .font(.subheadline)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .accessibilityElement(children: .ignore)
@@ -59,15 +62,20 @@ struct CompletedWorkoutSetRow: View {
   private var accessibilityValue: String {
     let setKind = exerciseSet.kind == .warmup ? "Warm-up" : "Working"
     let repetitions = "\(exerciseSet.reps) repetitions"
+    let loadDescription = switch exerciseSet.volumeLoad {
+    case .some(let load): "training load \(load.accessibilityText)"
+    case nil where exerciseSet.kind == .warmup: "excluded from training load"
+    case nil: "training load not available"
+    }
 
     guard let weight = exerciseSet.weight else {
-      return "\(setKind), \(repetitions)"
+      return "\(setKind), \(repetitions), \(loadDescription)"
     }
 
     let weightUnit = exerciseSet.weightUnit ?? .pounds
     let formattedWeight = weight.formatted(
       .number.precision(.fractionLength(0...1))
     )
-    return "\(setKind), \(repetitions) at \(formattedWeight) \(weightUnit.spokenName)"
+    return "\(setKind), \(repetitions) at \(formattedWeight) \(weightUnit.spokenName), \(loadDescription)"
   }
 }

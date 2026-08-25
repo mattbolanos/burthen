@@ -37,7 +37,9 @@ struct CompletedWorkoutHeader: View {
           .foregroundStyle(.secondary)
       }
 
-      TrainingLoadMetricCard(load: workout.volumeLoad)
+      TrainingLoadText(load: workout.volumeLoad)
+        .font(.headline)
+        .frame(maxWidth: .infinity, alignment: .trailing)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.vertical, LayoutMetrics.Spacing.small)
