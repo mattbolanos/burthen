@@ -100,7 +100,9 @@ private struct ActiveWorkoutEditor: View {
       workoutExerciseDestination(for: route)
     }
     .toolbar {
-      ToolbarItem(placement: .topBarLeading) {
+      ToolbarItemGroup(placement: .topBarTrailing) {
+        EditButton()
+
         Menu("More", systemImage: "ellipsis") {
           Button(
             "Save as New Template",
@@ -112,10 +114,6 @@ private struct ActiveWorkoutEditor: View {
         .accessibilityHint(
           "Contains options for this workout."
         )
-      }
-
-      ToolbarItemGroup(placement: .topBarTrailing) {
-        EditButton()
 
         Button(
           "Add Exercise",
@@ -199,9 +197,11 @@ private struct ActiveWorkoutEditor: View {
     performUpdate {
       let store = TrainingDataStore(modelContext: modelContext)
       for exerciseID in exerciseIDs {
-        guard let workoutExercise = workout.workoutExercises.first(where: {
-          $0.id == exerciseID
-        }) else { continue }
+        guard
+          let workoutExercise = workout.workoutExercises.first(where: {
+            $0.id == exerciseID
+          })
+        else { continue }
         try store.remove(workoutExercise, from: workout)
       }
     }
@@ -209,9 +209,11 @@ private struct ActiveWorkoutEditor: View {
 
   private func removeExercise(withID exerciseID: UUID) {
     guard workout.orderedExercises.count > 1 else { return }
-    guard let workoutExercise = workout.workoutExercises.first(where: {
-      $0.id == exerciseID
-    }) else { return }
+    guard
+      let workoutExercise = workout.workoutExercises.first(where: {
+        $0.id == exerciseID
+      })
+    else { return }
 
     performUpdate {
       try TrainingDataStore(modelContext: modelContext).remove(

@@ -8,6 +8,8 @@ import SwiftUI
 
 struct ActiveWorkoutExerciseView: View {
   @Environment(\.modelContext) private var modelContext
+  @ScaledMetric(relativeTo: .body)
+  private var setNumberColumnWidth = LayoutMetrics.Size.setNumberColumn
 
   let workoutExercise: WorkoutExercise
 
@@ -42,9 +44,11 @@ struct ActiveWorkoutExerciseView: View {
         .listRowInsets(EdgeInsets())
         .listRowBackground(Color.clear)
         .onChange(of: weightUnit, updateWeightUnit)
-      } header: {
-        SectionHeader("Weight Unit")
       }
+      .listSectionMargins(
+        .horizontal,
+        LayoutMetrics.Padding.horizontalContent
+      )
 
       Section {
         ForEach(
@@ -64,11 +68,38 @@ struct ActiveWorkoutExerciseView: View {
         }
         .onDelete(perform: removeSets)
 
-        Button("Add Set", systemImage: "plus", action: addSet)
+        Button(action: addSet) {
+          HStack(
+            alignment: .firstTextBaseline,
+            spacing: LayoutMetrics.Spacing.medium
+          ) {
+            Image(systemName: "plus")
+              .frame(
+                width: setNumberColumnWidth,
+                alignment: .leading
+              )
+              .accessibilityHidden(true)
+
+            Text("Add Set")
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .contentShape(.rect)
+        }
+        .accessibilityLabel("Add Set")
       } header: {
         SectionHeader("Sets")
       }
+      .listSectionMargins(
+        .horizontal,
+        LayoutMetrics.Padding.horizontalContent
+      )
     }
+    .contentMargins(
+      .top,
+      LayoutMetrics.Spacing.small,
+      for: .scrollContent
+    )
+    .listSectionSpacing(.compact)
     .navigationTitle(exerciseName)
     .navigationBarTitleDisplayMode(.large)
     .toolbar {

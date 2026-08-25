@@ -6,6 +6,9 @@
 import SwiftUI
 
 struct ExerciseSetEditorRow: View {
+  @ScaledMetric(relativeTo: .body)
+  private var setNumberColumnWidth = LayoutMetrics.Size.setNumberColumn
+
   let exerciseSet: ExerciseSet
   let setNumber: Int
   let weightUnit: WeightUnit
@@ -16,37 +19,38 @@ struct ExerciseSetEditorRow: View {
 
   var body: some View {
     Button(action: editSet) {
-      HStack(spacing: LayoutMetrics.Spacing.medium) {
+      HStack(alignment: .firstTextBaseline, spacing: LayoutMetrics.Spacing.medium) {
         Text(setNumber, format: .number)
-          .font(.subheadline.weight(.semibold))
+          .font(.body.weight(.semibold))
           .monospacedDigit()
-          .foregroundStyle(.tint)
-          .frame(width: LayoutMetrics.Size.setNumberColumn)
+          .foregroundStyle(.secondary)
+          .frame(
+            width: setNumberColumnWidth,
+            alignment: .leading
+          )
 
-        VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
-          setSummary
-            .font(.headline)
-            .monospacedDigit()
-            .foregroundStyle(.primary)
-
-          Text(setKindSummary)
-            .font(.subheadline)
-            .foregroundStyle(
-              exerciseSet.kind == .warmup ? Color.orange : Color.secondary
-            )
-        }
+        setSummary
+          .font(.body.weight(.semibold))
+          .monospacedDigit()
+          .foregroundStyle(.primary)
 
         Spacer(minLength: LayoutMetrics.Spacing.small)
 
-        TrainingLoadText(load: setVolumeLoad)
-          .font(.subheadline.weight(.semibold))
+        if exerciseSet.kind == .warmup {
+          Text("Warm-up")
+            .font(.body.weight(.medium))
+            .foregroundStyle(.orange)
+            .lineLimit(1)
+        } else {
+          TrainingLoadText(load: setVolumeLoad)
+            .font(.body)
+        }
 
         Image(systemName: "chevron.forward")
           .font(.caption.weight(.semibold))
           .foregroundStyle(.tertiary)
           .accessibilityHidden(true)
       }
-      .padding(.vertical, LayoutMetrics.Spacing.extraSmall)
       .frame(maxWidth: .infinity, alignment: .leading)
       .contentShape(.rect)
     }
@@ -69,19 +73,12 @@ struct ExerciseSetEditorRow: View {
     }
 
     guard let weight = exerciseSet.weight else {
-      return Text("\(exerciseSet.reps) × — \(weightUnit.displayAbbreviation)")
+      return Text("\(exerciseSet.reps) x — \(weightUnit.displayAbbreviation)")
     }
 
     return Text(
-      "\(exerciseSet.reps) × \(weight, format: .number.precision(.fractionLength(0...1))) \(weightUnit.displayAbbreviation)"
+      "\(exerciseSet.reps) x \(weight, format: .number.precision(.fractionLength(0...1))) \(weightUnit.displayAbbreviation)"
     )
-  }
-
-  private var setKindSummary: String {
-    switch exerciseSet.kind {
-    case .working: "Working"
-    case .warmup: "Warm-up"
-    }
   }
 
   private var setVolumeLoad: VolumeLoad? {

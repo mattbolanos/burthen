@@ -11,17 +11,13 @@ struct CompletedWorkoutExerciseCard: View {
   var body: some View {
     let orderedSets = workoutExercise.orderedSets
 
-    VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.medium) {
+    VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.large) {
       HStack(alignment: .top, spacing: LayoutMetrics.Spacing.medium) {
         VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
           Text(workoutExercise.exercise?.name ?? "Unavailable Exercise")
             .font(.headline)
             .foregroundStyle(.primary)
             .lineLimit(2)
-
-          Text(setCountLabel(for: orderedSets.count))
-            .font(.caption)
-            .foregroundStyle(.secondary)
         }
 
         Spacer(minLength: LayoutMetrics.Spacing.small)
@@ -35,8 +31,6 @@ struct CompletedWorkoutExerciseCard: View {
           .font(.subheadline)
           .foregroundStyle(.secondary)
       } else {
-        Divider()
-
         VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.small) {
           ForEach(
             Array(orderedSets.enumerated()),
@@ -56,9 +50,5 @@ struct CompletedWorkoutExerciseCard: View {
       .regular,
       in: .rect(cornerRadius: LayoutMetrics.CornerRadius.card)
     )
-  }
-
-  private func setCountLabel(for count: Int) -> String {
-    "\(count) \(count == 1 ? "set" : "sets")"
   }
 }

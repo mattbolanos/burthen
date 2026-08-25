@@ -6,6 +6,9 @@
 import SwiftUI
 
 struct CompletedWorkoutSetRow: View {
+  @ScaledMetric(relativeTo: .subheadline)
+  private var setNumberColumnWidth = LayoutMetrics.Size.setNumberColumn
+
   let exerciseSet: ExerciseSet
   let setNumber: Int
 
@@ -14,26 +17,28 @@ struct CompletedWorkoutSetRow: View {
       Text(setNumber, format: .number)
         .font(.subheadline.weight(.semibold))
         .monospacedDigit()
-        .foregroundStyle(.pink)
-        .frame(width: LayoutMetrics.Size.setNumberColumn)
+        .foregroundStyle(.secondary)
+        .frame(
+          width: setNumberColumnWidth,
+          alignment: .leading
+        )
 
-      VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
-        setSummary
-          .font(.subheadline.weight(.semibold))
-          .monospacedDigit()
-          .foregroundStyle(.primary)
-
-        Text(setKindLabel)
-          .font(.caption)
-          .foregroundStyle(
-            exerciseSet.kind == .warmup ? Color.orange : Color.secondary
-          )
-      }
+      setSummary
+        .font(.subheadline.weight(.semibold))
+        .monospacedDigit()
+        .foregroundStyle(.primary)
 
       Spacer(minLength: LayoutMetrics.Spacing.small)
 
-      TrainingLoadText(load: exerciseSet.volumeLoad)
-        .font(.subheadline)
+      if exerciseSet.kind == .warmup {
+        Text("Warm-up")
+          .font(.subheadline.weight(.medium))
+          .foregroundStyle(.orange)
+          .lineLimit(1)
+      } else {
+        TrainingLoadText(load: exerciseSet.volumeLoad, emphasis: .standard)
+          .font(.subheadline)
+      }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .accessibilityElement(children: .ignore)
@@ -48,25 +53,19 @@ struct CompletedWorkoutSetRow: View {
 
     let weightUnit = exerciseSet.weightUnit ?? .pounds
     return Text(
-      "\(exerciseSet.reps) reps at \(weight, format: .number.precision(.fractionLength(0...1))) \(weightUnit.displayAbbreviation)"
+      "\(exerciseSet.reps) x \(weight, format: .number.precision(.fractionLength(0...1))) \(weightUnit.displayAbbreviation)"
     )
-  }
-
-  private var setKindLabel: String {
-    switch exerciseSet.kind {
-    case .working: "Working"
-    case .warmup: "Warm-up"
-    }
   }
 
   private var accessibilityValue: String {
     let setKind = exerciseSet.kind == .warmup ? "Warm-up" : "Working"
     let repetitions = "\(exerciseSet.reps) repetitions"
-    let loadDescription = switch exerciseSet.volumeLoad {
-    case .some(let load): "training load \(load.accessibilityText)"
-    case nil where exerciseSet.kind == .warmup: "excluded from training load"
-    case nil: "training load not available"
-    }
+    let loadDescription =
+      switch exerciseSet.volumeLoad {
+      case .some(let load): "training load \(load.accessibilityText)"
+      case nil where exerciseSet.kind == .warmup: "excluded from training load"
+      case nil: "training load not available"
+      }
 
     guard let weight = exerciseSet.weight else {
       return "\(setKind), \(repetitions), \(loadDescription)"
@@ -76,6 +75,7 @@ struct CompletedWorkoutSetRow: View {
     let formattedWeight = weight.formatted(
       .number.precision(.fractionLength(0...1))
     )
-    return "\(setKind), \(repetitions) at \(formattedWeight) \(weightUnit.spokenName), \(loadDescription)"
+    return
+      "\(setKind), \(repetitions) at \(formattedWeight) \(weightUnit.spokenName), \(loadDescription)"
   }
 }

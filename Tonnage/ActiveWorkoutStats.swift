@@ -16,7 +16,8 @@ struct ActiveWorkoutStats: View {
           .foregroundStyle(.secondary)
 
         Text(
-          timerInterval: workout.startedAt...Date.distantFuture,
+          timerInterval: workout.startedAt...(workout.endedAt ?? Date.distantFuture),
+          pauseTime: workout.endedAt,
           countsDown: false,
           showsHours: true
         )
@@ -25,7 +26,9 @@ struct ActiveWorkoutStats: View {
         .foregroundStyle(.primary)
       }
 
-      VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
+      Spacer(minLength: LayoutMetrics.Spacing.small)
+
+      VStack(alignment: .trailing, spacing: LayoutMetrics.Spacing.extraSmall) {
         Text("Total")
           .font(.subheadline)
           .foregroundStyle(.secondary)
@@ -33,8 +36,6 @@ struct ActiveWorkoutStats: View {
         TrainingLoadText(load: workout.volumeLoad)
           .font(.title2.weight(.semibold))
       }
-
-      Spacer(minLength: LayoutMetrics.Spacing.small)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
   }

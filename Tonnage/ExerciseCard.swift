@@ -49,7 +49,7 @@ struct ExerciseCard: View {
         Spacer(minLength: LayoutMetrics.Spacing.small)
 
         TrainingLoadText(load: exercise.volumeLoad)
-          .font(.subheadline.weight(.semibold))
+          .font(.headline.weight(.semibold))
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .contentShape(.rect)

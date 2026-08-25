@@ -25,25 +25,18 @@ struct CompletedWorkoutHeader: View {
       )
       .font(.title3.weight(.semibold))
 
-      if let endedAt = workout.endedAt {
-        Text("Completed at \(endedAt, format: .dateTime.hour().minute())")
-          .font(.subheadline)
-          .foregroundStyle(.secondary)
-      }
-
       if let notes = workout.notes {
         Text(notes)
           .font(.subheadline)
           .foregroundStyle(.secondary)
       }
 
-      TrainingLoadText(load: workout.volumeLoad)
-        .font(.headline)
-        .frame(maxWidth: .infinity, alignment: .trailing)
+      ActiveWorkoutStats(workout: workout)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.vertical, LayoutMetrics.Spacing.small)
     .listRowSeparator(.hidden)
     .listRowBackground(Color.clear)
+    .accessibilityElement(children: .combine)
   }
 }
