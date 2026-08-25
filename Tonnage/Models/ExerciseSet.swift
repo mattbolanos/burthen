@@ -39,17 +39,12 @@ final class ExerciseSet {
   }
 
   var volumeLoad: VolumeLoad? {
-    guard
-      kind == .working,
-      reps > 0,
-      let weight,
-      weight > 0,
-      let weightUnit
-    else {
-      return nil
-    }
-
-    return VolumeLoad(value: Decimal(reps) * weight, unit: weightUnit)
+    VolumeLoad.forSet(
+      kind: kind,
+      repetitions: reps,
+      weight: weight,
+      unit: weightUnit
+    )
   }
 
   func validate() throws {

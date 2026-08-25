@@ -12,12 +12,10 @@ struct ActiveWorkoutView: View {
 
   var body: some View {
     NavigationStack {
-      GlassEffectContainer(spacing: LayoutMetrics.Spacing.large) {
-        ActiveWorkoutEditor(
-          workout: workout,
-          onDiscard: onDiscard
-        )
-      }
+      ActiveWorkoutEditor(
+        workout: workout,
+        onDiscard: onDiscard
+      )
     }
   }
 }
@@ -34,14 +32,19 @@ private struct ActiveWorkoutEditor: View {
   @State private var errorMessage = ""
 
   var body: some View {
+    let exerciseSummaries = workout.orderedExercises.map {
+      ActiveWorkoutExerciseSummary(workoutExercise: $0)
+    }
+    let canDeleteExercises = exerciseSummaries.count > 1
+
     List {
       ActiveWorkoutHeader(workout: workout)
 
-      if workout.orderedExercises.isEmpty {
+      if exerciseSummaries.isEmpty {
         ActiveWorkoutEmptyState(addExercise: presentExercisePicker)
       } else {
-        ForEach(workout.orderedExercises) { workoutExercise in
-          ExerciseCard(workoutExercise: workoutExercise)
+        ForEach(exerciseSummaries) { exercise in
+          ExerciseCard(exercise: exercise)
             .listRowInsets(LayoutMetrics.Insets.cardRow)
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)
@@ -51,12 +54,16 @@ private struct ActiveWorkoutEditor: View {
                 systemImage: "trash",
                 role: .destructive
               ) {
-                removeExercise(workoutExercise)
+                removeExercise(withID: exercise.id)
               }
               .labelStyle(.iconOnly)
+              .disabled(!canDeleteExercises)
             }
+            .deleteDisabled(!canDeleteExercises)
         }
-        .onDelete(perform: removeExercises)
+        .onDelete { offsets in
+          removeExercises(at: offsets, from: exerciseSummaries)
+        }
         .onMove(perform: moveExercises)
       }
 
@@ -89,6 +96,9 @@ private struct ActiveWorkoutEditor: View {
     .background(Color(uiColor: .systemGroupedBackground))
     .navigationTitle("Active Workout")
     .navigationBarTitleDisplayMode(.large)
+    .navigationDestination(for: ActiveWorkoutExerciseRoute.self) { route in
+      workoutExerciseDestination(for: route)
+    }
     .toolbar {
       ToolbarItem(placement: .topBarLeading) {
         Menu("More", systemImage: "ellipsis") {
@@ -175,21 +185,55 @@ private struct ActiveWorkoutEditor: View {
     }
   }
 
-  private func removeExercises(at offsets: IndexSet) {
-    let exercises = offsets.map { workout.orderedExercises[$0] }
+  private func removeExercises(
+    at offsets: IndexSet,
+    from exerciseSummaries: [ActiveWorkoutExerciseSummary]
+  ) {
+    let exerciseIDs = offsets.compactMap { index in
+      exerciseSummaries.indices.contains(index)
+        ? exerciseSummaries[index].id
+        : nil
+    }
+    guard exerciseSummaries.count - exerciseIDs.count >= 1 else { return }
+
     performUpdate {
       let store = TrainingDataStore(modelContext: modelContext)
-      for exercise in exercises {
-        try store.remove(exercise, from: workout)
+      for exerciseID in exerciseIDs {
+        guard let workoutExercise = workout.workoutExercises.first(where: {
+          $0.id == exerciseID
+        }) else { continue }
+        try store.remove(workoutExercise, from: workout)
       }
     }
   }
 
-  private func removeExercise(_ workoutExercise: WorkoutExercise) {
+  private func removeExercise(withID exerciseID: UUID) {
+    guard workout.orderedExercises.count > 1 else { return }
+    guard let workoutExercise = workout.workoutExercises.first(where: {
+      $0.id == exerciseID
+    }) else { return }
+
     performUpdate {
       try TrainingDataStore(modelContext: modelContext).remove(
         workoutExercise,
         from: workout
+      )
+    }
+  }
+
+  @ViewBuilder
+  private func workoutExerciseDestination(
+    for route: ActiveWorkoutExerciseRoute
+  ) -> some View {
+    if let workoutExercise = workout.workoutExercises.first(where: {
+      $0.id == route.exerciseID
+    }) {
+      ActiveWorkoutExerciseView(workoutExercise: workoutExercise)
+    } else {
+      ContentUnavailableView(
+        "Exercise Unavailable",
+        systemImage: "dumbbell",
+        description: Text("This exercise is no longer part of the workout.")
       )
     }
   }
@@ -258,6 +302,9 @@ private struct ActiveWorkoutHeader: View {
       .monospacedDigit()
       .foregroundStyle(.primary)
 
+      TrainingLoadMetricCard(
+        load: workout.volumeLoad
+      )
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.vertical, LayoutMetrics.Spacing.small)
@@ -271,18 +318,24 @@ private struct ActiveWorkoutEmptyState: View {
   let addExercise: () -> Void
 
   var body: some View {
-    ContentUnavailableView {
-      Label("No Exercises", systemImage: "dumbbell")
-    } description: {
-      Text("Add an exercise to start logging this workout.")
-    } actions: {
+    Section {
+      ContentUnavailableView(
+        "No Exercises",
+        systemImage: "dumbbell",
+        description: Text("Add an exercise to start logging this workout.")
+      )
+      .listRowSeparator(.hidden)
+      .listRowBackground(Color.clear)
+
       Button("Add Exercise", systemImage: "plus", action: addExercise)
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
         .tint(.pink)
+        .fixedSize()
+        .frame(maxWidth: .infinity)
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
     }
-    .listRowSeparator(.hidden)
-    .listRowBackground(Color.clear)
   }
 }
 

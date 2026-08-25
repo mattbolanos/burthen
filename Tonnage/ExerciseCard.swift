@@ -3,32 +3,52 @@
 //  Tonnage
 //
 
+import Foundation
 import SwiftUI
 
+struct ActiveWorkoutExerciseRoute: Hashable {
+  let exerciseID: UUID
+}
+
+struct ActiveWorkoutExerciseSummary: Identifiable {
+  let id: UUID
+  let name: String
+  let setCount: Int
+  let volumeLoad: VolumeLoad?
+
+  init(workoutExercise: WorkoutExercise) {
+    id = workoutExercise.id
+    name = workoutExercise.exercise?.name ?? "Unavailable Exercise"
+    setCount = workoutExercise.exerciseSets.count
+    volumeLoad = workoutExercise.volumeLoad
+  }
+
+  var setCountLabel: String {
+    "\(setCount) \(setCount == 1 ? "set" : "sets")"
+  }
+}
+
 struct ExerciseCard: View {
-  let workoutExercise: WorkoutExercise
-
-  private var exerciseName: String {
-    workoutExercise.exercise?.name ?? "Unavailable Exercise"
-  }
-
-  private var setCountLabel: String {
-    let setCount = workoutExercise.exerciseSets.count
-    return "\(setCount) \(setCount == 1 ? "set" : "sets")"
-  }
+  let exercise: ActiveWorkoutExerciseSummary
 
   var body: some View {
-    NavigationLink {
-      ActiveWorkoutExerciseView(workoutExercise: workoutExercise)
-    } label: {
-      VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
-        Text(exerciseName)
-          .font(.headline)
-          .foregroundStyle(.primary)
-          .lineLimit(2)
-        Text(setCountLabel)
-          .font(.caption)
-          .foregroundStyle(.secondary)
+    NavigationLink(
+      value: ActiveWorkoutExerciseRoute(exerciseID: exercise.id)
+    ) {
+      HStack(spacing: LayoutMetrics.Spacing.medium) {
+        VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
+          Text(exercise.name)
+            .font(.headline)
+            .foregroundStyle(.primary)
+            .lineLimit(2)
+          Text(exercise.setCountLabel)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+
+        Spacer(minLength: LayoutMetrics.Spacing.small)
+
+        TrainingLoadCompactMetric(load: exercise.volumeLoad)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .contentShape(.rect)

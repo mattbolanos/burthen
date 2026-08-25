@@ -67,7 +67,7 @@ struct ExerciseSetPicker: View {
 
           Label(setTypeDescription, systemImage: setTypeSymbol)
             .font(.footnote)
-            .foregroundStyle(kind == .warmup ? Color.orange : Color.secondary)
+            .foregroundStyle(kind == .warmup ? Color.orange : Color.pink)
         }
         .padding(.bottom, LayoutMetrics.Spacing.extraSmall)
 
@@ -194,9 +194,21 @@ struct ExerciseSetPicker: View {
 
   private var setTypeDescription: String {
     switch kind {
-    case .working: "Counts toward workout load"
-    case .warmup: "Excluded from workout load"
+    case .working: ""
+    case .warmup: "Excluded from training load"
     }
+  }
+
+  private var draftVolumeLoad: VolumeLoad? {
+    let halfSteps = wholeWeight * 2 + (usesHalfWeight ? 1 : 0)
+    let weight = halfSteps == 0 ? nil : Decimal(halfSteps) / 2
+
+    return VolumeLoad.forSet(
+      kind: kind,
+      repetitions: repetitions,
+      weight: weight,
+      unit: weightUnit
+    )
   }
 
   private var setTypeSymbol: String {

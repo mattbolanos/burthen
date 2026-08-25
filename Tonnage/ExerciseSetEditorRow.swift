@@ -38,6 +38,8 @@ struct ExerciseSetEditorRow: View {
 
         Spacer(minLength: LayoutMetrics.Spacing.small)
 
+        TrainingLoadCompactMetric(load: setVolumeLoad)
+
         Image(systemName: "chevron.forward")
           .font(.caption.weight(.semibold))
           .foregroundStyle(.tertiary)
@@ -81,20 +83,30 @@ struct ExerciseSetEditorRow: View {
     }
   }
 
+  private var setVolumeLoad: VolumeLoad? {
+    exerciseSet.volumeLoad?.converted(to: weightUnit)
+  }
+
   private var accessibilityValue: String {
     let type = exerciseSet.kind == .warmup
-      ? "Warm-up set, excluded from workout load"
-      : "Working set, counts toward workout load"
+      ? "Warm-up set, excluded from training load"
+      : "Working set"
 
     guard requiresWeight || exerciseSet.weight != nil else {
-      return "\(type), \(exerciseSet.reps) repetitions"
+      return "\(type), \(exerciseSet.reps) repetitions, training load not available"
     }
 
     guard let weight = exerciseSet.weight else {
-      return "\(type), \(exerciseSet.reps) repetitions, no weight"
+      return "\(type), \(exerciseSet.reps) repetitions, no weight, training load not available"
     }
 
-    return "\(type), \(exerciseSet.reps) repetitions, \(weight) \(weightUnit.spokenName)"
+    let setDescription =
+      "\(type), \(exerciseSet.reps) repetitions, \(weight) \(weightUnit.spokenName)"
+
+    guard let setVolumeLoad else {
+      return "\(setDescription), training load not available"
+    }
+    return "\(setDescription), training load \(setVolumeLoad.accessibilityText)"
   }
 
   private func editSet() {

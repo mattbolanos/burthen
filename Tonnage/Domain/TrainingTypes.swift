@@ -75,6 +75,37 @@ struct VolumeLoad: Equatable {
   let value: Decimal
   let unit: WeightUnit
 
+  static func forSet(
+    kind: ExerciseSetKind,
+    repetitions: Int,
+    weight: Decimal?,
+    unit: WeightUnit?
+  ) -> VolumeLoad? {
+    guard
+      kind == .working,
+      repetitions > 0,
+      let weight,
+      weight > 0,
+      let unit
+    else {
+      return nil
+    }
+
+    return VolumeLoad(value: Decimal(repetitions) * weight, unit: unit)
+  }
+
+  var formattedValue: String {
+    value.formatted(.number.precision(.fractionLength(0...1)))
+  }
+
+  var displayText: String {
+    "\(formattedValue) \(unit.displayAbbreviation)"
+  }
+
+  var accessibilityText: String {
+    "\(formattedValue) \(unit.spokenName)"
+  }
+
   func converted(to targetUnit: WeightUnit) -> VolumeLoad {
     VolumeLoad(value: unit.convert(value, to: targetUnit), unit: targetUnit)
   }

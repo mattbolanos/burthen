@@ -156,30 +156,28 @@ private struct BlankWorkoutActions: View {
   let startWorkout: () -> Void
 
   var body: some View {
-    GlassEffectContainer(spacing: LayoutMetrics.Spacing.small) {
-      VStack(spacing: LayoutMetrics.Spacing.small) {
-        Button(action: saveTemplate) {
-          Label(
-            "Save as Template",
-            systemImage: "rectangle.stack.badge.plus"
-          )
-          .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.glass)
-        .controlSize(.large)
-        .accessibilityHint(
-          "Creates a reusable template from these exercises."
+    VStack(spacing: LayoutMetrics.Spacing.small) {
+      Button(action: saveTemplate) {
+        Label(
+          "Save as Template",
+          systemImage: "rectangle.stack.badge.plus"
         )
-
-        Button(action: startWorkout) {
-          Text("Start Workout")
-            .font(.headline)
-            .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.glassProminent)
-        .controlSize(.large)
-        .accessibilityHint("Starts a workout with these exercises.")
+        .frame(maxWidth: .infinity)
       }
+      .buttonStyle(.glass)
+      .controlSize(.large)
+      .accessibilityHint(
+        "Creates a reusable template from these exercises."
+      )
+
+      Button(action: startWorkout) {
+        Text("Start Workout")
+          .font(.headline)
+          .frame(maxWidth: .infinity)
+      }
+      .buttonStyle(.glassProminent)
+      .controlSize(.large)
+      .accessibilityHint("Starts a workout with these exercises.")
     }
   }
 }

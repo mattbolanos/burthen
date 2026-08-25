@@ -56,6 +56,10 @@ final class WorkoutExercise {
       ?? .pounds
   }
 
+  var volumeLoad: VolumeLoad? {
+    volumeLoad(in: weightUnit)
+  }
+
   func addSet(
     kind: ExerciseSetKind = .working,
     reps: Int,

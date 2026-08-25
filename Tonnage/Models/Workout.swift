@@ -65,6 +65,20 @@ final class Workout {
     name ?? defaultName()
   }
 
+  var volumeLoadUnit: WeightUnit {
+    orderedExercises.first { workoutExercise in
+      workoutExercise.exercise?.loadMode == .externalResistance
+    }?.weightUnit
+      ?? orderedExercises.compactMap { workoutExercise in
+        workoutExercise.orderedSets.compactMap(\.weightUnit).first
+      }.first
+      ?? .pounds
+  }
+
+  var volumeLoad: VolumeLoad? {
+    volumeLoad(in: volumeLoadUnit)
+  }
+
   func defaultName() -> String {
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = TimeZone(identifier: timeZoneIdentifier) ?? .current

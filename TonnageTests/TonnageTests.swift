@@ -62,7 +62,9 @@ struct TonnageTests {
 
     let load = workout.volumeLoad(in: .pounds)
 
+    #expect(benchEntry.volumeLoad == VolumeLoad(value: 705, unit: .pounds))
     #expect(load == VolumeLoad(value: 755, unit: .pounds))
+    #expect(workout.volumeLoad == load)
     #expect(workout.volumeLoad(for: benchPress.id, in: .pounds)?.value == 705)
     #expect(workout.volumeLoad(for: pushUp.id, in: .pounds)?.value == 50)
   }
@@ -107,7 +109,9 @@ struct TonnageTests {
 
     let expected = Decimal(1_000) + WeightUnit.kilograms.convert(100, to: .pounds)
 
+    #expect(entry.volumeLoad == VolumeLoad(value: expected, unit: .pounds))
     #expect(workout.volumeLoad(in: .pounds)?.value == expected)
+    #expect(workout.volumeLoad == VolumeLoad(value: expected, unit: .pounds))
   }
 
   @Test
@@ -946,6 +950,33 @@ struct TonnageTests {
         == [secondBench.id, firstBench.id, squatEntry.id]
     )
     #expect(workout.orderedExercises.map(\.position) == [0, 1, 2])
+  }
+
+  @Test
+  func removingAWorkoutExerciseCascadesSetsAndKeepsRemainingRowsValid() throws {
+    let container = try makeContainer()
+    let context = container.mainContext
+    let store = TrainingDataStore(modelContext: context)
+    let benchPress = try store.createExercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let squat = try store.createExercise(
+      name: "Squat",
+      loadMode: .externalResistance
+    )
+    let workout = try store.startWorkout()
+    let benchEntry = try store.addExercise(benchPress, to: workout)
+    let squatEntry = try store.addExercise(squat, to: workout)
+    try context.save()
+
+    try store.remove(benchEntry, from: workout)
+    try context.save()
+
+    #expect(workout.orderedExercises.map(\.id) == [squatEntry.id])
+    #expect(workout.orderedExercises.map(\.position) == [0])
+    #expect(try context.fetchCount(FetchDescriptor<WorkoutExercise>()) == 1)
+    #expect(try context.fetchCount(FetchDescriptor<ExerciseSet>()) == 3)
   }
 
   @Test

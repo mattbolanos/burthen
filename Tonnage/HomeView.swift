@@ -144,6 +144,8 @@ private struct ActiveWorkoutRow: View {
         )
         .font(.subheadline)
         .foregroundStyle(.secondary)
+
+        TrainingLoadInlineMetric(load: workout.volumeLoad)
       }
 
       Spacer(minLength: LayoutMetrics.Spacing.small)
@@ -188,6 +190,8 @@ private struct CompletedWorkoutRow: View {
       )
       .font(.subheadline)
       .foregroundStyle(.secondary)
+
+      TrainingLoadInlineMetric(load: workout.volumeLoad)
     }
     .frame(
       maxWidth: .infinity,
