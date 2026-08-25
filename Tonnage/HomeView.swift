@@ -9,7 +9,7 @@ import SwiftUI
 struct HomeView: View {
   @Query private var templates: [WorkoutTemplate]
 
-  @Binding var navigationPath: [NewWorkoutRoute]
+  @Binding var navigationPath: [HomeRoute]
 
   let workouts: [Workout]
   let resumeActiveWorkout: () -> Void
@@ -51,7 +51,13 @@ struct HomeView: View {
         if !completedWorkouts.isEmpty {
           Section {
             ForEach(completedWorkouts) { workout in
-              CompletedWorkoutRow(workout: workout)
+              Button {
+                showCompletedWorkout(workout)
+              } label: {
+                CompletedWorkoutRow(workout: workout)
+              }
+              .buttonStyle(.plain)
+              .accessibilityHint("Shows the exercises and sets from this workout.")
             }
           } header: {
             SectionHeader("Recent")
@@ -71,7 +77,7 @@ struct HomeView: View {
       .toolbar {
         ToolbarItem(placement: .topBarTrailing) {
           Menu("Add Workout", systemImage: "plus") {
-            NavigationLink(value: NewWorkoutRoute.blank) {
+            NavigationLink(value: HomeRoute.blank) {
               Label("Blank Workout", systemImage: "doc")
             }
             if !hasActiveTemplates {
@@ -81,7 +87,7 @@ struct HomeView: View {
                 action: createTemplate
               )
             } else {
-              NavigationLink(value: NewWorkoutRoute.templates) {
+              NavigationLink(value: HomeRoute.templates) {
                 Label("Choose a Template", systemImage: "rectangle.stack")
               }
             }
@@ -94,12 +100,22 @@ struct HomeView: View {
           )
         }
       }
-      .navigationDestination(for: NewWorkoutRoute.self) { route in
+      .navigationDestination(for: HomeRoute.self) { route in
         switch route {
         case .blank:
           BlankWorkoutView()
         case .templates:
           WorkoutTemplatePickerView()
+        case .completedWorkout(let workoutID):
+          if let workout = workouts.first(where: { $0.id == workoutID }) {
+            CompletedWorkoutView(workout: workout)
+          } else {
+            ContentUnavailableView(
+              "Workout Unavailable",
+              systemImage: "dumbbell",
+              description: Text("This workout is no longer available.")
+            )
+          }
         }
       }
       .sheet(isPresented: $isCreatingTemplate) {
@@ -110,6 +126,10 @@ struct HomeView: View {
 
   private func createTemplate() {
     isCreatingTemplate = true
+  }
+
+  private func showCompletedWorkout(_ workout: Workout) {
+    navigationPath.append(.completedWorkout(workout.id))
   }
 
   private func isMoreRecentlyCompleted(_ lhs: Workout, _ rhs: Workout) -> Bool {
@@ -174,24 +194,38 @@ private struct CompletedWorkoutRow: View {
   let workout: Workout
 
   var body: some View {
-    VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
-      Text(workout.displayName)
+    let volumeLoad = workout.volumeLoad
+
+    HStack(alignment: .top, spacing: LayoutMetrics.Spacing.medium) {
+      VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
+        Text(workout.displayName)
+          .font(.headline)
+          .foregroundStyle(.primary)
+
+        Text(
+          workout.endedAt ?? workout.updatedAt,
+          format: .dateTime
+            .weekday(.abbreviated)
+            .month(.abbreviated)
+            .day()
+            .hour()
+            .minute()
+        )
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
+      }
+
+      Spacer(minLength: LayoutMetrics.Spacing.small)
+
+      Text(volumeLoad?.formattedValue ?? "—")
         .font(.headline)
-        .foregroundStyle(.primary)
-
-      Text(
-        workout.endedAt ?? workout.updatedAt,
-        format: .dateTime
-          .weekday(.abbreviated)
-          .month(.abbreviated)
-          .day()
-          .hour()
-          .minute()
-      )
-      .font(.subheadline)
-      .foregroundStyle(.secondary)
-
-      TrainingLoadInlineMetric(load: workout.volumeLoad)
+        .monospacedDigit()
+        .foregroundStyle(volumeLoad == nil ? Color.secondary : Color.pink)
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Training load")
+        .accessibilityValue(volumeLoad?.accessibilityText ?? "Not available")
     }
     .frame(
       maxWidth: .infinity,
@@ -199,12 +233,13 @@ private struct CompletedWorkoutRow: View {
       alignment: .leading
     )
     .padding(.vertical, LayoutMetrics.Spacing.extraSmall)
+    .contentShape(.rect)
     .accessibilityElement(children: .combine)
   }
 }
 
 #Preview {
-  @Previewable @State var navigationPath: [NewWorkoutRoute] = []
+  @Previewable @State var navigationPath: [HomeRoute] = []
 
   HomeView(
     navigationPath: $navigationPath,

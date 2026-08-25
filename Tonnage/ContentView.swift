@@ -13,7 +13,7 @@ struct ContentView: View {
   private var workouts: [Workout]
 
   @State private var selection = AppTab.home
-  @State private var homeNavigationPath: [NewWorkoutRoute] = []
+  @State private var homeNavigationPath: [HomeRoute] = []
 
   private var activeWorkout: Workout? {
     workouts.first { $0.status == .inProgress }

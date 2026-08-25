@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		83F8E980303E43220044BD95 /* TonnageIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 83F8E97F303E43220044BD95 /* TonnageIcon.icon */; };
+		83F8E981303E43220044BD95 /* TonnageIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 83F8E97F303E43220044BD95 /* TonnageIcon.icon */; };
 		A100000130155EBB003E2C6E /* TonnageWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A100000330155EBB003E2C6E /* TonnageWidgets.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -52,6 +54,7 @@
 		83013A5430155EBB003E2C6E /* Tonnage.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tonnage.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		83013A6330155EBD003E2C6E /* TonnageTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TonnageTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		83013A6D30155EBD003E2C6E /* TonnageUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TonnageUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		83F8E97F303E43220044BD95 /* TonnageIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = TonnageIcon.icon; sourceTree = "<group>"; };
 		A100000330155EBB003E2C6E /* TonnageWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TonnageWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -124,6 +127,7 @@
 				83013A6630155EBD003E2C6E /* TonnageTests */,
 				83013A7030155EBD003E2C6E /* TonnageUITests */,
 				83013A5530155EBB003E2C6E /* Products */,
+				83F8E97F303E43220044BD95 /* TonnageIcon.icon */,
 			);
 			sourceTree = "<group>";
 		};
@@ -288,6 +292,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				83F8E980303E43220044BD95 /* TonnageIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -309,6 +314,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				83F8E981303E43220044BD95 /* TonnageIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -488,7 +494,7 @@
 		83013A7830155EBD003E2C6E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = TonnageIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -522,7 +528,7 @@
 		83013A7930155EBD003E2C6E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = TonnageIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
