@@ -1,0 +1,480 @@
+//
+//  ActiveWorkoutView.swift
+//  Burthen
+//
+
+import SwiftData
+import SwiftUI
+
+struct ActiveWorkoutView: View {
+  let workout: Workout
+  let onDiscard: () -> Void
+
+  var body: some View {
+    NavigationStack {
+      ActiveWorkoutEditor(
+        workout: workout,
+        onDiscard: onDiscard
+      )
+    }
+  }
+}
+
+private struct ActiveWorkoutEditor: View {
+  @Environment(\.modelContext) private var modelContext
+
+  let workout: Workout
+  let onDiscard: () -> Void
+
+  @State private var presentedSheet: ActiveWorkoutSheet?
+  @State private var isConfirmingWorkoutEnd = false
+  @State private var isShowingError = false
+  @State private var errorMessage = ""
+
+  var body: some View {
+    let exerciseSummaries = workout.orderedExercises.map {
+      ActiveWorkoutExerciseSummary(workoutExercise: $0)
+    }
+    let canDeleteExercises = exerciseSummaries.count > 1
+
+    List {
+      ActiveWorkoutHeader(workout: workout)
+
+      if exerciseSummaries.isEmpty {
+        ActiveWorkoutEmptyState(addExercise: presentExercisePicker)
+      } else {
+        ForEach(exerciseSummaries) { exercise in
+          ExerciseCard(exercise: exercise)
+            .listRowInsets(LayoutMetrics.Insets.cardRow)
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+              Button(
+                "Delete Exercise",
+                systemImage: "trash",
+                role: .destructive
+              ) {
+                removeExercise(withID: exercise.id)
+              }
+              .labelStyle(.iconOnly)
+              .disabled(!canDeleteExercises)
+            }
+            .deleteDisabled(!canDeleteExercises)
+        }
+        .onDelete { offsets in
+          removeExercises(at: offsets, from: exerciseSummaries)
+        }
+        .onMove(perform: moveExercises)
+      }
+
+      Button(action: requestWorkoutEnd) {
+        Text("End Workout")
+          .font(.headline)
+          .frame(maxWidth: .infinity)
+      }
+      .buttonStyle(.glass)
+      .controlSize(.large)
+      .tint(.red)
+      .listRowInsets(LayoutMetrics.Insets.finalActionRow)
+      .listRowSeparator(.hidden)
+      .listRowBackground(Color.clear)
+      .accessibilityHint("Shows options to save or discard this workout.")
+      .confirmationDialog(
+        "End Workout?",
+        isPresented: $isConfirmingWorkoutEnd,
+        titleVisibility: .visible
+      ) {
+        Button("Complete Workout", action: saveAndEndWorkout)
+        Button("Discard Workout", role: .destructive, action: discardWorkout)
+        Button("Continue Workout", role: .cancel) {}
+      } message: {
+        Text("Save your sets and workout duration, or discard this workout permanently.")
+      }
+    }
+    .listStyle(.plain)
+    .scrollContentBackground(.hidden)
+    .background(Color(uiColor: .systemGroupedBackground))
+    .navigationTitle("Active Workout")
+    .navigationBarTitleDisplayMode(.large)
+    .navigationDestination(for: ActiveWorkoutExerciseRoute.self) { route in
+      workoutExerciseDestination(for: route)
+    }
+    .toolbar {
+      ToolbarItemGroup(placement: .topBarTrailing) {
+        EditButton()
+
+        Menu("More", systemImage: "ellipsis") {
+          Button(
+            "Save as New Template",
+            systemImage: "rectangle.stack.badge.plus",
+            action: presentTemplateEditor
+          )
+          .disabled(workout.orderedExercises.isEmpty)
+        }
+        .accessibilityHint(
+          "Contains options for this workout."
+        )
+
+        Button(
+          "Add Exercise",
+          systemImage: "plus",
+          action: presentExercisePicker
+        )
+      }
+    }
+    .sheet(item: $presentedSheet) { sheet in
+      switch sheet {
+      case .exercisePicker:
+        WorkoutExercisePicker(workout: workout)
+      case .template(let seed):
+        AddWorkoutTemplateView(seed: seed)
+      }
+    }
+    .alert("Workout Couldn’t Be Updated", isPresented: $isShowingError) {
+      Button("OK", role: .cancel) {}
+    } message: {
+      Text(errorMessage)
+    }
+    .onAppear(perform: prepareWorkout)
+  }
+
+  private func presentExercisePicker() {
+    presentedSheet = .exercisePicker
+  }
+
+  private func presentTemplateEditor() {
+    presentedSheet = .template(WorkoutTemplateSeed(workout: workout))
+  }
+
+  private func requestWorkoutEnd() {
+    isConfirmingWorkoutEnd = true
+  }
+
+  private func saveAndEndWorkout() {
+    performUpdate {
+      try workout.complete()
+    }
+  }
+
+  private func discardWorkout() {
+    let didDiscard = performUpdate {
+      try TrainingDataStore(modelContext: modelContext).discard(workout)
+    }
+
+    if didDiscard {
+      onDiscard()
+    }
+  }
+
+  private func prepareWorkout() {
+    performUpdate {
+      try TrainingDataStore(modelContext: modelContext).prepareForEditing(workout)
+    }
+  }
+
+  private func moveExercises(from offsets: IndexSet, to destination: Int) {
+    var orderedExercises = workout.orderedExercises
+    orderedExercises.move(fromOffsets: offsets, toOffset: destination)
+    performUpdate {
+      try TrainingDataStore(modelContext: modelContext).reorderExercises(
+        in: workout,
+        to: orderedExercises
+      )
+    }
+  }
+
+  private func removeExercises(
+    at offsets: IndexSet,
+    from exerciseSummaries: [ActiveWorkoutExerciseSummary]
+  ) {
+    let exerciseIDs = offsets.compactMap { index in
+      exerciseSummaries.indices.contains(index)
+        ? exerciseSummaries[index].id
+        : nil
+    }
+    guard exerciseSummaries.count - exerciseIDs.count >= 1 else { return }
+
+    performUpdate {
+      let store = TrainingDataStore(modelContext: modelContext)
+      for exerciseID in exerciseIDs {
+        guard
+          let workoutExercise = workout.workoutExercises.first(where: {
+            $0.id == exerciseID
+          })
+        else { continue }
+        try store.remove(workoutExercise, from: workout)
+      }
+    }
+  }
+
+  private func removeExercise(withID exerciseID: UUID) {
+    guard workout.orderedExercises.count > 1 else { return }
+    guard
+      let workoutExercise = workout.workoutExercises.first(where: {
+        $0.id == exerciseID
+      })
+    else { return }
+
+    performUpdate {
+      try TrainingDataStore(modelContext: modelContext).remove(
+        workoutExercise,
+        from: workout
+      )
+    }
+  }
+
+  @ViewBuilder
+  private func workoutExerciseDestination(
+    for route: ActiveWorkoutExerciseRoute
+  ) -> some View {
+    if let workoutExercise = workout.workoutExercises.first(where: {
+      $0.id == route.exerciseID
+    }) {
+      ActiveWorkoutExerciseView(workoutExercise: workoutExercise)
+    } else {
+      ContentUnavailableView(
+        "Exercise Unavailable",
+        systemImage: "dumbbell",
+        description: Text("This exercise is no longer part of the workout.")
+      )
+    }
+  }
+
+  @discardableResult
+  private func performUpdate(_ update: () throws -> Void) -> Bool {
+    do {
+      try update()
+      try modelContext.save()
+      return true
+    } catch {
+      modelContext.rollback()
+      errorMessage = activeWorkoutErrorMessage(for: error)
+      isShowingError = true
+      return false
+    }
+  }
+}
+
+private enum ActiveWorkoutSheet: Identifiable {
+  case exercisePicker
+  case template(WorkoutTemplateSeed)
+
+  var id: String {
+    switch self {
+    case .exercisePicker:
+      "exercise-picker"
+    case .template(let seed):
+      "template-\(seed.id)"
+    }
+  }
+}
+
+private struct ActiveWorkoutHeader: View {
+  let workout: Workout
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.small) {
+      Text(workout.displayName)
+        .font(.headline)
+        .foregroundStyle(.secondary)
+
+      Text(
+        workout.startedAt,
+        format: .dateTime
+          .weekday(.wide)
+          .month(.wide)
+          .day()
+          .hour()
+          .minute()
+      )
+      .font(.title3.weight(.semibold))
+
+      if let notes = workout.notes {
+        Text(notes)
+          .font(.subheadline)
+          .foregroundStyle(.secondary)
+      }
+
+      ActiveWorkoutStats(workout: workout)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.vertical, LayoutMetrics.Spacing.small)
+    .listRowSeparator(.hidden)
+    .listRowBackground(Color.clear)
+    .accessibilityElement(children: .combine)
+  }
+}
+
+private struct ActiveWorkoutEmptyState: View {
+  let addExercise: () -> Void
+
+  var body: some View {
+    Section {
+      ContentUnavailableView(
+        "No Exercises",
+        systemImage: "dumbbell",
+        description: Text("Add an exercise to start logging this workout.")
+      )
+      .listRowSeparator(.hidden)
+      .listRowBackground(Color.clear)
+
+      Button("Add Exercise", systemImage: "plus", action: addExercise)
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+        .tint(.pink)
+        .fixedSize()
+        .frame(maxWidth: .infinity)
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+    }
+  }
+}
+
+private struct WorkoutExercisePicker: View {
+  @Environment(\.dismiss) private var dismiss
+  @Environment(\.modelContext) private var modelContext
+
+  @Query(
+    filter: #Predicate<Exercise> { !$0.isArchived },
+    sort: \Exercise.name
+  )
+  private var activeExercises: [Exercise]
+
+  let workout: Workout
+
+  @State private var isShowingError = false
+  @State private var errorMessage = ""
+
+  var body: some View {
+    NavigationStack {
+      List {
+        Section {
+          ForEach(activeExercises) { exercise in
+            Button {
+              add(exercise)
+            } label: {
+              WorkoutExercisePickerRow(exercise: exercise)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Adds this exercise to the active workout.")
+          }
+        } footer: {
+          Text("An exercise can be added more than once.")
+        }
+      }
+      .overlay {
+        if activeExercises.isEmpty {
+          ContentUnavailableView(
+            "No Exercises",
+            systemImage: "dumbbell",
+            description: Text("Create an exercise in Settings before adding it here.")
+          )
+        }
+      }
+      .navigationTitle("Add Exercise")
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button("Cancel", action: dismiss.callAsFunction)
+        }
+      }
+      .alert("Exercise Couldn’t Be Added", isPresented: $isShowingError) {
+        Button("OK", role: .cancel) {}
+      } message: {
+        Text(errorMessage)
+      }
+    }
+  }
+
+  private func add(_ exercise: Exercise) {
+    do {
+      _ = try TrainingDataStore(modelContext: modelContext).addExercise(
+        exercise,
+        to: workout
+      )
+      try modelContext.save()
+      dismiss()
+    } catch {
+      errorMessage = activeWorkoutErrorMessage(for: error)
+      isShowingError = true
+    }
+  }
+}
+
+private struct WorkoutExercisePickerRow: View {
+  let exercise: Exercise
+
+  var body: some View {
+    HStack(spacing: LayoutMetrics.Spacing.medium) {
+      VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
+        Text(exercise.name)
+          .font(.body.weight(.medium))
+          .foregroundStyle(.primary)
+        Text(exercise.activeWorkoutTrackingSummary)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+
+      Spacer()
+
+      Image(systemName: "plus.circle.fill")
+        .font(.title3)
+        .foregroundStyle(.tint)
+        .accessibilityHidden(true)
+    }
+    .contentShape(.rect)
+  }
+}
+
+extension Exercise {
+  fileprivate var activeWorkoutTrackingSummary: String {
+    let load =
+      switch loadMode {
+      case .externalResistance: "External resistance"
+      case .bodyweight: "Bodyweight"
+      }
+    let repetitions = repetitionMode == .perSide ? "Per side" : "Standard reps"
+    return "\(load) · \(repetitions)"
+  }
+}
+
+func activeWorkoutErrorMessage(for error: Error) -> String {
+  guard let modelError = error as? WorkoutModelError else {
+    return error.localizedDescription
+  }
+
+  return switch modelError {
+  case .cannotRemoveLastSet:
+    "Each exercise needs at least one set."
+  case .exerciseIsArchived:
+    "This exercise is no longer available."
+  case .invalidReps:
+    "Enter at least one repetition for every set before saving the workout."
+  case .missingExercise:
+    "Remove unavailable exercises before saving the workout."
+  case .missingWeight:
+    "Enter a weight for every weighted set before saving the workout."
+  case .missingWeightUnit:
+    "Choose a weight unit for every weighted set before saving the workout."
+  case .workoutAlreadyCompleted:
+    "This workout has already ended."
+  case .workoutHasNoSets:
+    "Add an exercise before saving the workout, or discard it instead."
+  case .workoutIsNotInProgress:
+    "Only an active workout can be edited."
+  default:
+    "The workout couldn’t be updated."
+  }
+}
+
+#Preview("Active Workout") {
+  ActiveWorkoutView(
+    workout: try! Workout(
+      name: "Push Day",
+      notes: "Chest and shoulders",
+      startedAt: .now.addingTimeInterval(-3_725)
+    ),
+    onDiscard: {}
+  )
+  .modelContainer(for: BurthenSchema.models, inMemory: true)
+}
