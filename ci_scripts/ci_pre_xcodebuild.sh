@@ -19,7 +19,9 @@ fi
 if [ -z "${BURTHEN_DISTRIBUTION_P12_BASE64:-}" ] || \
    [ -z "${BURTHEN_DISTRIBUTION_P12_PASSWORD:-}" ] || \
    [ -z "${BURTHEN_APP_STORE_PROFILE_BASE64:-}" ] || \
-   [ -z "${BURTHEN_WIDGET_STORE_PROFILE_BASE64:-}" ]; then
+   [ -z "${BURTHEN_WIDGET_STORE_PROFILE_BASE64:-}" ] || \
+   [ -z "${BURTHEN_AD_HOC_PROFILE_BASE64:-}" ] || \
+   [ -z "${BURTHEN_WIDGET_AD_HOC_PROFILE_BASE64:-}" ]; then
     echo "error: The Prod workflow requires its redacted distribution-signing secrets and profiles."
     exit 1
 fi
@@ -32,10 +34,17 @@ KEYCHAIN_PATH="$TEMPORARY_DIRECTORY/burthen-signing-$(/usr/bin/uuidgen).keychain
 P12_PATH="$TEMPORARY_DIRECTORY/burthen-distribution-$(/usr/bin/uuidgen).p12"
 APP_PROFILE_TEMP_PATH="$TEMPORARY_DIRECTORY/burthen-app-store-$(/usr/bin/uuidgen).mobileprovision"
 WIDGET_PROFILE_TEMP_PATH="$TEMPORARY_DIRECTORY/burthen-widget-store-$(/usr/bin/uuidgen).mobileprovision"
+APP_AD_HOC_PROFILE_TEMP_PATH="$TEMPORARY_DIRECTORY/burthen-app-ad-hoc-$(/usr/bin/uuidgen).mobileprovision"
+WIDGET_AD_HOC_PROFILE_TEMP_PATH="$TEMPORARY_DIRECTORY/burthen-widget-ad-hoc-$(/usr/bin/uuidgen).mobileprovision"
 PROFILE_DIRECTORY="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
 
 cleanup() {
-    /bin/rm -f "$P12_PATH" "$APP_PROFILE_TEMP_PATH" "$WIDGET_PROFILE_TEMP_PATH"
+    /bin/rm -f \
+        "$P12_PATH" \
+        "$APP_PROFILE_TEMP_PATH" \
+        "$WIDGET_PROFILE_TEMP_PATH" \
+        "$APP_AD_HOC_PROFILE_TEMP_PATH" \
+        "$WIDGET_AD_HOC_PROFILE_TEMP_PATH"
 }
 trap cleanup EXIT HUP INT TERM
 
@@ -80,6 +89,7 @@ install_profile() {
     SIGNING_PROFILE_BASE64="$1"
     SIGNING_PROFILE_TEMP_PATH="$2"
     EXPECTED_APPLICATION_IDENTIFIER="$3"
+    EXPECTED_PROFILE_KIND="$4"
 
     /usr/bin/printf '%s' "$SIGNING_PROFILE_BASE64" | /usr/bin/base64 --decode > "$SIGNING_PROFILE_TEMP_PATH"
     /bin/chmod 600 "$SIGNING_PROFILE_TEMP_PATH"
@@ -89,12 +99,23 @@ install_profile() {
     SIGNING_PROFILE_APPLICATION_IDENTIFIER="$(/usr/bin/printf '%s' "$SIGNING_PROFILE_PLIST" | /usr/bin/plutil -extract Entitlements.application-identifier raw -o - -)"
     SIGNING_PROFILE_CERTIFICATE_BASE64="$(/usr/bin/printf '%s' "$SIGNING_PROFILE_PLIST" | /usr/bin/plutil -extract DeveloperCertificates.0 raw -o - -)"
     SIGNING_PROFILE_CERTIFICATE_SHA1="$(/usr/bin/printf '%s' "$SIGNING_PROFILE_CERTIFICATE_BASE64" | /usr/bin/base64 --decode | /usr/bin/shasum -a 1 | /usr/bin/awk '{ print toupper($1) }')"
+    SIGNING_PROFILE_HAS_DEVICES="FALSE"
+    if /usr/bin/printf '%s' "$SIGNING_PROFILE_PLIST" | \
+       /usr/bin/plutil -extract ProvisionedDevices xml1 -o - - >/dev/null 2>&1; then
+        SIGNING_PROFILE_HAS_DEVICES="TRUE"
+    fi
 
     if [ "$SIGNING_PROFILE_TEAM_ID" != "$TEAM_ID" ] || \
        [ "$SIGNING_PROFILE_APPLICATION_IDENTIFIER" != "$EXPECTED_APPLICATION_IDENTIFIER" ] || \
        [ "$SIGNING_PROFILE_CERTIFICATE_SHA1" != "$IMPORTED_CERTIFICATE_SHA1" ] || \
        ! /usr/bin/printf '%s' "$SIGNING_PROFILE_UUID" | /usr/bin/grep -E '^[0-9A-Fa-f-]{36}$' >/dev/null; then
         echo "error: A signing profile does not match the imported certificate and expected application identifier."
+        exit 1
+    fi
+
+    if { [ "$EXPECTED_PROFILE_KIND" = "app-store" ] && [ "$SIGNING_PROFILE_HAS_DEVICES" != "FALSE" ]; } || \
+       { [ "$EXPECTED_PROFILE_KIND" = "ad-hoc" ] && [ "$SIGNING_PROFILE_HAS_DEVICES" != "TRUE" ]; }; then
+        echo "error: A signing profile does not match its expected distribution method."
         exit 1
     fi
 
@@ -106,11 +127,23 @@ install_profile() {
 install_profile \
     "$BURTHEN_APP_STORE_PROFILE_BASE64" \
     "$APP_PROFILE_TEMP_PATH" \
-    "$APP_APPLICATION_IDENTIFIER"
+    "$APP_APPLICATION_IDENTIFIER" \
+    "app-store"
 install_profile \
     "$BURTHEN_WIDGET_STORE_PROFILE_BASE64" \
     "$WIDGET_PROFILE_TEMP_PATH" \
-    "$WIDGET_APPLICATION_IDENTIFIER"
+    "$WIDGET_APPLICATION_IDENTIFIER" \
+    "app-store"
+install_profile \
+    "$BURTHEN_AD_HOC_PROFILE_BASE64" \
+    "$APP_AD_HOC_PROFILE_TEMP_PATH" \
+    "$APP_APPLICATION_IDENTIFIER" \
+    "ad-hoc"
+install_profile \
+    "$BURTHEN_WIDGET_AD_HOC_PROFILE_BASE64" \
+    "$WIDGET_AD_HOC_PROFILE_TEMP_PATH" \
+    "$WIDGET_APPLICATION_IDENTIFIER" \
+    "ad-hoc"
 cleanup
 
 # Xcode's distribution exporter prefers a local Apple Distribution identity in
