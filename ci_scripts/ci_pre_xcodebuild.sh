@@ -4,6 +4,8 @@ set -eu
 
 WORKFLOW_NAME="Prod"
 TEAM_ID="H2Q833KX49"
+SCRIPT_DIRECTORY="$(CDPATH= cd -- "$(/usr/bin/dirname -- "$0")" && /bin/pwd)"
+WWDR_CERTIFICATE_PATH="$SCRIPT_DIRECTORY/AppleWWDRCAG3.pem"
 
 # Keep local development and non-production Xcode Cloud actions unchanged.
 if [ "${CI_XCODE_CLOUD:-FALSE}" != "TRUE" ] || \
@@ -42,6 +44,14 @@ trap cleanup EXIT HUP INT TERM
     -T /usr/bin/codesign \
     -T /usr/bin/security
 cleanup
+
+# A fresh Xcode Cloud worker can lack the G3 intermediate that issued Apple
+# Distribution certificates. Apple publishes this certificate publicly, and
+# committing it makes signing deterministic without another network request.
+/usr/bin/security import "$WWDR_CERTIFICATE_PATH" \
+    -k "$KEYCHAIN_PATH" \
+    -T /usr/bin/codesign \
+    -T /usr/bin/security >/dev/null
 /usr/bin/security set-key-partition-list \
     -S apple-tool:,apple:,codesign: \
     -s \
