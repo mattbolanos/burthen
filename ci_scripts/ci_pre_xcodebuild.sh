@@ -48,14 +48,16 @@ cleanup
     -k "$KEYCHAIN_PASSWORD" \
     "$KEYCHAIN_PATH" >/dev/null
 
-IDENTITIES="$(/usr/bin/security find-identity -v -p codesigning "$KEYCHAIN_PATH")"
-IDENTITY_COUNT="$(/usr/bin/printf '%s\n' "$IDENTITIES" | /usr/bin/grep -c '^[[:space:]]*[0-9][0-9]*)' || true)"
+IMPORTED_CERTIFICATES="$(/usr/bin/security find-certificate -a -Z -c 'Apple Distribution:' "$KEYCHAIN_PATH")"
+IMPORTED_CERTIFICATE_COUNT="$(/usr/bin/printf '%s\n' "$IMPORTED_CERTIFICATES" | /usr/bin/grep -c '^SHA-1 hash:' || true)"
 
-if [ "$IDENTITY_COUNT" -ne 1 ] || \
-   ! /usr/bin/printf '%s\n' "$IDENTITIES" | /usr/bin/grep -F 'Apple Distribution:' | /usr/bin/grep -F "($TEAM_ID)" >/dev/null; then
-    echo "error: The signing secret must contain exactly one Apple Distribution identity for team $TEAM_ID."
+if [ "$IMPORTED_CERTIFICATE_COUNT" -ne 1 ] || \
+   ! /usr/bin/printf '%s\n' "$IMPORTED_CERTIFICATES" | /usr/bin/grep -F "$TEAM_ID" >/dev/null; then
+    echo "error: The signing secret must contain one Apple Distribution certificate for team $TEAM_ID."
     exit 1
 fi
+
+IMPORTED_CERTIFICATE_SHA1="$(/usr/bin/printf '%s\n' "$IMPORTED_CERTIFICATES" | /usr/bin/awk '/^SHA-1 hash:/ { print $3; exit }')"
 
 # Xcode's distribution exporter prefers a local Apple Distribution identity in
 # the user's keychain search list and otherwise falls back to cloud signing.
@@ -64,5 +66,18 @@ EXISTING_KEYCHAINS="$(/usr/bin/security list-keychains -d user | /usr/bin/tr -d 
 # preserves every existing worker keychain after adding the temporary one.
 # shellcheck disable=SC2086
 /usr/bin/security list-keychains -d user -s "$KEYCHAIN_PATH" $EXISTING_KEYCHAINS
+
+# Validate after extending the search list. On a clean Xcode Cloud worker, the
+# Apple intermediate certificate can live in one of the worker's keychains, so
+# querying the temporary keychain in isolation incorrectly reports no valid
+# identities even though the imported certificate and private key are intact.
+VALID_IDENTITIES="$(/usr/bin/security find-identity -v -p codesigning)"
+if ! /usr/bin/printf '%s\n' "$VALID_IDENTITIES" | \
+   /usr/bin/grep -F "$IMPORTED_CERTIFICATE_SHA1" | \
+   /usr/bin/grep -F 'Apple Distribution:' | \
+   /usr/bin/grep -F "($TEAM_ID)" >/dev/null; then
+    echo "error: The imported Apple Distribution identity is not valid for team $TEAM_ID."
+    exit 1
+fi
 
 echo "Configured an ephemeral Apple Distribution identity for team $TEAM_ID."
