@@ -232,11 +232,11 @@ private struct ActiveWorkoutEditor: View {
     }) {
       ActiveWorkoutExerciseView(workoutExercise: workoutExercise)
     } else {
-      ContentUnavailableView(
-        "Exercise Unavailable",
-        systemImage: "dumbbell",
-        description: Text("This exercise is no longer part of the workout.")
-      )
+      ContentUnavailableView {
+        ContentUnavailableLogoLabel(title: "Exercise Unavailable")
+      } description: {
+        Text("This exercise is no longer part of the workout.")
+      }
     }
   }
 
@@ -310,11 +310,11 @@ private struct ActiveWorkoutEmptyState: View {
 
   var body: some View {
     Section {
-      ContentUnavailableView(
-        "No Exercises",
-        systemImage: "dumbbell",
-        description: Text("Add an exercise to start logging this workout.")
-      )
+      ContentUnavailableView {
+        ContentUnavailableLogoLabel(title: "No Exercises")
+      } description: {
+        Text("Add an exercise to start logging this workout.")
+      }
       .listRowSeparator(.hidden)
       .listRowBackground(Color.clear)
 
@@ -364,11 +364,11 @@ private struct WorkoutExercisePicker: View {
       }
       .overlay {
         if activeExercises.isEmpty {
-          ContentUnavailableView(
-            "No Exercises",
-            systemImage: "dumbbell",
-            description: Text("Create an exercise in Settings before adding it here.")
-          )
+          ContentUnavailableView {
+            ContentUnavailableLogoLabel(title: "No Exercises")
+          } description: {
+            Text("Create an exercise in Settings before adding it here.")
+          }
         }
       }
       .navigationTitle("Add Exercise")

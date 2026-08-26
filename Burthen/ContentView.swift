@@ -32,7 +32,7 @@ struct ContentView: View {
   var body: some View {
     TabView(selection: $selection) {
       if let activeWorkout {
-        Tab("Workout", systemImage: "dumbbell.fill", value: AppTab.activeWorkout) {
+        Tab("Workout", image: "BurthenLogo", value: AppTab.activeWorkout) {
           ActiveWorkoutView(
             workout: activeWorkout,
             onDiscard: showHome

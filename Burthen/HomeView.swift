@@ -66,11 +66,11 @@ struct HomeView: View {
       }
       .overlay {
         if activeWorkout == nil, completedWorkouts.isEmpty {
-          ContentUnavailableView(
-            "No Workouts Yet",
-            systemImage: "dumbbell",
-            description: Text("Start a blank workout or choose a template to begin.")
-          )
+          ContentUnavailableView {
+            ContentUnavailableLogoLabel(title: "No Workouts Yet")
+          } description: {
+            Text("Start a blank workout or choose a template to begin.")
+          }
         }
       }
       .navigationTitle("Workouts")
@@ -110,11 +110,11 @@ struct HomeView: View {
           if let workout = workouts.first(where: { $0.id == workoutID }) {
             CompletedWorkoutView(workout: workout)
           } else {
-            ContentUnavailableView(
-              "Workout Unavailable",
-              systemImage: "dumbbell",
-              description: Text("This workout is no longer available.")
-            )
+            ContentUnavailableView {
+              ContentUnavailableLogoLabel(title: "Workout Unavailable")
+            } description: {
+              Text("This workout is no longer available.")
+            }
           }
         }
       }

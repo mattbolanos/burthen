@@ -398,7 +398,7 @@ private struct TemplateExerciseSelectionView: View {
       .overlay {
         if activeExercises.isEmpty {
           ContentUnavailableView {
-            Label("No Exercises", systemImage: "dumbbell")
+            ContentUnavailableLogoLabel(title: "No Exercises")
           } description: {
             Text("Create an exercise to add it to this template.")
           } actions: {

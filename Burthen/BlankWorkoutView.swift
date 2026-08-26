@@ -188,7 +188,7 @@ private struct BlankWorkoutEmptyState: View {
 
   var body: some View {
     ContentUnavailableView {
-      Label("No Exercises Yet", systemImage: "dumbbell")
+      ContentUnavailableLogoLabel(title: "No Exercises Yet")
     } description: {
       Text("Create a new exercise or add existing ones from your library.")
     } actions: {
@@ -285,7 +285,7 @@ private struct BlankWorkoutExercisePicker: View {
       .overlay {
         if activeExercises.isEmpty {
           ContentUnavailableView {
-            Label("No Exercises", systemImage: "dumbbell")
+            ContentUnavailableLogoLabel(title: "No Exercises")
           } description: {
             Text("Create an exercise to add it to this workout.")
           } actions: {

@@ -15,11 +15,11 @@ struct CompletedWorkoutView: View {
       CompletedWorkoutHeader(workout: workout)
 
       if orderedExercises.isEmpty {
-        ContentUnavailableView(
-          "No Exercises",
-          systemImage: "dumbbell",
-          description: Text("No exercises were recorded for this workout.")
-        )
+        ContentUnavailableView {
+          ContentUnavailableLogoLabel(title: "No Exercises")
+        } description: {
+          Text("No exercises were recorded for this workout.")
+        }
         .listRowSeparator(.hidden)
         .listRowBackground(Color.clear)
       } else {

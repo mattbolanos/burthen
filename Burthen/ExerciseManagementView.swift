@@ -92,7 +92,7 @@ struct ExerciseManagementView: View {
     .overlay {
       if !hasExercises {
         ContentUnavailableView {
-          Label("No Exercises", systemImage: "dumbbell")
+          ContentUnavailableLogoLabel(title: "No Exercises")
         } description: {
           Text("Add an exercise to use it in workouts and templates.")
         } actions: {
