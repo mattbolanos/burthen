@@ -96,7 +96,7 @@ struct HomeView: View {
           .accessibilityHint(
             activeWorkout == nil
               ? "Choose how to start a workout."
-              : "Finish or discard the active workout before starting another one."
+              : "Finish or discard the active workout before starting a new one."
           )
         }
       }
