@@ -288,6 +288,25 @@ struct TrainingDataStore {
     workout.updatedAt = date
   }
 
+  func setCompletion(
+    _ isCompleted: Bool,
+    for exerciseSet: ExerciseSet,
+    at date: Date = .now
+  ) throws {
+    guard let workoutExercise = exerciseSet.workoutExercise else {
+      throw WorkoutModelError.missingExercise
+    }
+    let workout = try activeWorkout(for: workoutExercise)
+
+    if isCompleted {
+      try exerciseSet.validate()
+      exerciseSet.completedAt = date
+    } else {
+      exerciseSet.completedAt = nil
+    }
+    workout.updatedAt = date
+  }
+
   func remove(
     _ workoutExercise: WorkoutExercise,
     from workout: Workout,
@@ -488,7 +507,7 @@ struct TrainingDataStore {
       guard workoutExercise.workout?.status == .completed else {
         return [ExerciseSet]()
       }
-      return workoutExercise.exerciseSets
+      return workoutExercise.exerciseSets.filter(\.isCompleted)
     }
   }
 

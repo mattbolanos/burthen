@@ -62,6 +62,7 @@ struct ActiveWorkoutExerciseView: View {
             requiresWeight: requiresWeight,
             canDelete: orderedSets.count > 1,
             edit: editSet,
+            setCompletion: setCompletion,
             remove: removeSet
           )
           .deleteDisabled(orderedSets.count <= 1)
@@ -160,6 +161,15 @@ struct ActiveWorkoutExerciseView: View {
       try TrainingDataStore(modelContext: modelContext).remove(
         exerciseSet,
         from: workoutExercise
+      )
+    }
+  }
+
+  private func setCompletion(_ isCompleted: Bool, for exerciseSet: ExerciseSet) {
+    performUpdate {
+      try TrainingDataStore(modelContext: modelContext).setCompletion(
+        isCompleted,
+        for: exerciseSet
       )
     }
   }

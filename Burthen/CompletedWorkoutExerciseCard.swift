@@ -9,7 +9,7 @@ struct CompletedWorkoutExerciseCard: View {
   let workoutExercise: WorkoutExercise
 
   var body: some View {
-    let orderedSets = workoutExercise.orderedSets
+    let orderedSets = workoutExercise.orderedSets.filter(\.isCompleted)
 
     VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.large) {
       HStack(alignment: .top, spacing: LayoutMetrics.Spacing.medium) {

@@ -148,8 +148,30 @@ struct ExerciseSetPicker: View {
         }
 
         HStack(spacing: LayoutMetrics.Spacing.large) {
-          Color.clear
-            .frame(maxWidth: .infinity, maxHeight: 0)
+          VStack(
+            alignment: .leading,
+            spacing: LayoutMetrics.Spacing.extraSmall
+          ) {
+            Text("Set Volume")
+              .font(.subheadline)
+              .foregroundStyle(.pink)
+
+            if kind == .warmup {
+              Text("Excluded")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(.secondary)
+            } else {
+              TrainingLoadText(
+                load: draftVolumeLoad,
+                emphasis: .standard
+              )
+              .font(.title3.weight(.semibold))
+            }
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .accessibilityElement(children: .ignore)
+          .accessibilityLabel("Set volume")
+          .accessibilityValue(setVolumeAccessibilityValue)
 
           Toggle(isOn: $usesHalfWeight) {
             Text("+ ½ \(weightUnit.displayAbbreviation)")
@@ -199,6 +221,14 @@ struct ExerciseSetPicker: View {
       weight: weight,
       unit: weightUnit
     )
+  }
+
+  private var setVolumeAccessibilityValue: String {
+    if kind == .warmup {
+      return "Excluded for warm-up sets"
+    }
+
+    return draftVolumeLoad?.accessibilityText ?? "Not available"
   }
 
   private func enforceWeightLimit() {

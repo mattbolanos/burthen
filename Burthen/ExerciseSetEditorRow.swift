@@ -15,50 +15,66 @@ struct ExerciseSetEditorRow: View {
   let requiresWeight: Bool
   let canDelete: Bool
   let edit: (ExerciseSet) -> Void
+  let setCompletion: (Bool, ExerciseSet) -> Void
   let remove: (ExerciseSet) -> Void
 
   var body: some View {
-    Button(action: editSet) {
-      HStack(alignment: .firstTextBaseline, spacing: LayoutMetrics.Spacing.medium) {
-        Text(setNumber, format: .number)
-          .font(.body.weight(.semibold))
-          .monospacedDigit()
-          .foregroundStyle(.secondary)
-          .frame(
-            width: setNumberColumnWidth,
-            alignment: .leading
-          )
+    HStack(spacing: LayoutMetrics.Spacing.medium) {
+      Button(action: editSet) {
+        HStack(alignment: .firstTextBaseline, spacing: LayoutMetrics.Spacing.medium) {
+          Text(setNumber, format: .number)
+            .font(.body.weight(.semibold))
+            .monospacedDigit()
+            .foregroundStyle(.secondary)
+            .frame(
+              width: setNumberColumnWidth,
+              alignment: .leading
+            )
 
-        setSummary
-          .font(.body.weight(.semibold))
-          .monospacedDigit()
-          .foregroundStyle(.primary)
+          setSummary
+            .font(.body.weight(.semibold))
+            .monospacedDigit()
+            .foregroundStyle(.primary)
 
-        Spacer(minLength: LayoutMetrics.Spacing.small)
+          Spacer(minLength: LayoutMetrics.Spacing.small)
 
-        if exerciseSet.kind == .warmup {
-          Text("Warm-up")
-            .font(.body.weight(.medium))
-            .foregroundStyle(.orange)
-            .lineLimit(1)
-        } else {
-          TrainingLoadText(load: setVolumeLoad)
-            .font(.body)
+          if exerciseSet.kind == .warmup {
+            Text("Warm-up")
+              .font(.body.weight(.medium))
+              .foregroundStyle(.orange)
+              .lineLimit(1)
+          }
         }
-
-        Image(systemName: "chevron.forward")
-          .font(.caption.weight(.semibold))
-          .foregroundStyle(.tertiary)
-          .accessibilityHidden(true)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(.rect)
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .contentShape(.rect)
+      .buttonStyle(.plain)
+      .opacity(exerciseSet.isCompleted ? 0.5 : 1)
+      .accessibilityLabel("Set \(setNumber)")
+      .accessibilityValue(accessibilityValue)
+      .accessibilityHint("Opens the set editor")
+      .accessibilityInputLabels(["Edit Set \(setNumber)", "Set \(setNumber)"])
+
+      Button(action: toggleCompletion) {
+        Label(completionButtonLabel, systemImage: completionSystemImage)
+          .labelStyle(.iconOnly)
+          .font(.title3)
+          .foregroundStyle(
+            exerciseSet.isCompleted ? Color.accentColor : Color.secondary
+          )
+          .contentTransition(.symbolEffect(.replace))
+      }
+      .buttonStyle(.plain)
+      .frame(
+        width: LayoutMetrics.Size.setCompletionControl,
+        height: LayoutMetrics.Size.setCompletionControl
+      )
+      .accessibilityHint(
+        exerciseSet.isCompleted
+          ? "Removes this set from training load."
+          : "Adds this set to training load."
+      )
     }
-    .buttonStyle(.plain)
-    .accessibilityLabel("Set \(setNumber)")
-    .accessibilityValue(accessibilityValue)
-    .accessibilityHint("Opens the set editor")
-    .accessibilityInputLabels(["Edit Set \(setNumber)", "Set \(setNumber)"])
     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
       if canDelete {
         Button("Delete Set", systemImage: "trash", role: .destructive, action: removeSet)
@@ -81,34 +97,37 @@ struct ExerciseSetEditorRow: View {
     )
   }
 
-  private var setVolumeLoad: VolumeLoad? {
-    exerciseSet.volumeLoad?.converted(to: weightUnit)
-  }
-
   private var accessibilityValue: String {
+    let completion = exerciseSet.isCompleted ? "Completed" : "Not completed"
     let type = exerciseSet.kind == .warmup
       ? "Warm-up set, excluded from training load"
       : "Working set"
 
     guard requiresWeight || exerciseSet.weight != nil else {
-      return "\(type), \(exerciseSet.reps) repetitions, training load not available"
+      return "\(completion), \(type), \(exerciseSet.reps) repetitions"
     }
 
     guard let weight = exerciseSet.weight else {
-      return "\(type), \(exerciseSet.reps) repetitions, no weight, training load not available"
+      return "\(completion), \(type), \(exerciseSet.reps) repetitions, no weight"
     }
 
-    let setDescription =
-      "\(type), \(exerciseSet.reps) repetitions, \(weight) \(weightUnit.spokenName)"
-
-    guard let setVolumeLoad else {
-      return "\(setDescription), training load not available"
-    }
-    return "\(setDescription), training load \(setVolumeLoad.accessibilityText)"
+    return "\(completion), \(type), \(exerciseSet.reps) repetitions, \(weight) \(weightUnit.spokenName)"
   }
 
   private func editSet() {
     edit(exerciseSet)
+  }
+
+  private var completionButtonLabel: String {
+    exerciseSet.isCompleted ? "Mark Set Incomplete" : "Complete Set"
+  }
+
+  private var completionSystemImage: String {
+    exerciseSet.isCompleted ? "checkmark.circle.fill" : "circle"
+  }
+
+  private func toggleCompletion() {
+    setCompletion(!exerciseSet.isCompleted, exerciseSet)
   }
 
   private func removeSet() {

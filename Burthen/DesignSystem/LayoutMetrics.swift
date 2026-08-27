@@ -31,9 +31,15 @@ enum LayoutMetrics {
 
   enum Size {
     static let contentUnavailableLogoWidth: CGFloat = 64
+    static let exerciseProgressIndicator: CGFloat = 24
     static let setNumberColumn = Spacing.large
     static let workoutRowContentHeight: CGFloat = 44
     static let resumeWorkoutButton = workoutRowContentHeight
+    static let setCompletionControl = workoutRowContentHeight
+  }
+
+  enum StrokeWidth {
+    static let exerciseProgressIndicator: CGFloat = 6
   }
 
   enum Insets {

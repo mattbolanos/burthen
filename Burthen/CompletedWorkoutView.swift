@@ -9,7 +9,9 @@ struct CompletedWorkoutView: View {
   let workout: Workout
 
   var body: some View {
-    let orderedExercises = workout.orderedExercises
+    let orderedExercises = workout.orderedExercises.filter { workoutExercise in
+      workoutExercise.exerciseSets.contains { $0.isCompleted }
+    }
 
     List {
       CompletedWorkoutHeader(workout: workout)
