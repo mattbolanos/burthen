@@ -459,7 +459,7 @@ func activeWorkoutErrorMessage(for error: Error) -> String {
   case .workoutAlreadyCompleted:
     "This workout has already ended."
   case .workoutHasNoSets:
-    "Add an exercise before saving the workout, or discard it instead."
+    "Complete at least one set before saving the workout, or discard it instead."
   case .workoutIsNotInProgress:
     "Only an active workout can be edited."
   default:

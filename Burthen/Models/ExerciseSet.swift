@@ -39,12 +39,18 @@ final class ExerciseSet {
   }
 
   var volumeLoad: VolumeLoad? {
-    VolumeLoad.forSet(
+    guard isCompleted else { return nil }
+
+    return VolumeLoad.forSet(
       kind: kind,
       repetitions: reps,
       weight: weight,
       unit: weightUnit
     )
+  }
+
+  var isCompleted: Bool {
+    completedAt != nil
   }
 
   func validate() throws {

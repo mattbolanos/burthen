@@ -90,6 +90,95 @@ struct BurthenTests {
   }
 
   @Test
+  func incompleteSetsDoNotContributeToVolumeLoad() throws {
+    let benchPress = try Exercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let workout = try Workout()
+    let entry = try workout.addExercise(benchPress)
+    let completedSet = try entry.addSet(
+      reps: 10,
+      weight: 40,
+      weightUnit: .pounds
+    )
+    let incompleteSet = try entry.addSet(
+      reps: 10,
+      weight: 50,
+      weightUnit: .pounds,
+      completedAt: nil
+    )
+
+    #expect(completedSet.volumeLoad?.value == 400)
+    #expect(incompleteSet.volumeLoad == nil)
+    #expect(entry.volumeLoad?.value == 400)
+    #expect(workout.volumeLoad?.value == 400)
+  }
+
+  @Test
+  func incompleteSetsDoNotMakeAWorkoutCompletable() throws {
+    let benchPress = try Exercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let workout = try Workout()
+    let entry = try workout.addExercise(benchPress)
+    _ = try entry.addDraftSet()
+
+    #expect(!workout.isCompletable)
+    #expect(throws: WorkoutModelError.workoutHasNoSets) {
+      try workout.complete()
+    }
+
+    _ = try entry.addSet(
+      reps: 10,
+      weight: 40,
+      weightUnit: .pounds
+    )
+
+    #expect(workout.isCompletable)
+    try workout.complete()
+    #expect(workout.status == .completed)
+  }
+
+  @Test
+  func exerciseCompletesWhenAllWorkingSetsAreCompleted() throws {
+    let benchPress = try Exercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let workout = try Workout()
+    let entry = try workout.addExercise(benchPress)
+    _ = try entry.addSet(
+      kind: .warmup,
+      reps: 10,
+      weight: 20,
+      weightUnit: .pounds,
+      completedAt: nil
+    )
+    let firstWorkingSet = try entry.addSet(
+      reps: 10,
+      weight: 40,
+      weightUnit: .pounds
+    )
+    _ = try entry.addSet(
+      reps: 8,
+      weight: 40,
+      weightUnit: .pounds,
+      completedAt: nil
+    )
+
+    #expect(entry.completedWorkingSetCount == 1)
+    #expect(!entry.isCompleted)
+
+    entry.orderedSets.last?.completedAt = .now
+
+    #expect(firstWorkingSet.isCompleted)
+    #expect(entry.completedWorkingSetCount == 2)
+    #expect(entry.isCompleted)
+  }
+
+  @Test
   func bodyweightOnlyWorkoutHasNoVolumeLoad() throws {
     let pushUp = try Exercise(name: "Push-up", loadMode: .bodyweight)
     let workout = try Workout()
@@ -224,7 +313,7 @@ struct BurthenTests {
     let workout = try Workout(startedAt: .now)
     let pushUp = try Exercise(name: "Push-up", loadMode: .bodyweight)
     let entry = try workout.addExercise(pushUp)
-    try entry.addSet(reps: 10, completedAt: nil)
+    try entry.addSet(reps: 10)
 
     try workout.complete(at: nil)
 
@@ -825,6 +914,9 @@ struct BurthenTests {
     completedEntry.orderedSets[1].reps = 9
     completedEntry.orderedSets[2].kind = .warmup
     completedEntry.orderedSets[2].reps = 20
+    try store.setCompletion(true, for: completedEntry.orderedSets[0])
+    try store.setCompletion(true, for: completedEntry.orderedSets[1])
+    try store.setCompletion(true, for: completedEntry.orderedSets[2])
     try completedWorkout.complete(at: Date(timeIntervalSince1970: 2_000))
 
     let activeWorkout = try store.startWorkout(
@@ -853,6 +945,7 @@ struct BurthenTests {
     for exerciseSet in firstEntry.orderedSets {
       exerciseSet.weight = 100
       exerciseSet.weightUnit = .pounds
+      try store.setCompletion(true, for: exerciseSet)
     }
     try firstWorkout.complete(at: Date(timeIntervalSince1970: 2_000))
 
@@ -864,6 +957,9 @@ struct BurthenTests {
     secondEntry.orderedSets[1].weight = 125
     secondEntry.orderedSets[2].kind = .warmup
     secondEntry.orderedSets[2].weight = 40
+    try store.setCompletion(true, for: secondEntry.orderedSets[0])
+    try store.setCompletion(true, for: secondEntry.orderedSets[1])
+    try store.setCompletion(true, for: secondEntry.orderedSets[2])
     try secondWorkout.complete(at: Date(timeIntervalSince1970: 4_000))
 
     let activeWorkout = try store.startWorkout(

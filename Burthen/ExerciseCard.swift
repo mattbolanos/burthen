@@ -14,17 +14,62 @@ struct ActiveWorkoutExerciseSummary: Identifiable {
   let id: UUID
   let name: String
   let setCount: Int
-  let volumeLoad: VolumeLoad?
+  let completedSetCount: Int
 
   init(workoutExercise: WorkoutExercise) {
     id = workoutExercise.id
     name = workoutExercise.exercise?.name ?? "Unavailable Exercise"
-    setCount = workoutExercise.exerciseSets.count
-    volumeLoad = workoutExercise.volumeLoad
+    setCount = workoutExercise.workingSets.count
+    completedSetCount = workoutExercise.completedWorkingSetCount
   }
 
   var setCountLabel: String {
-    "\(setCount) \(setCount == 1 ? "set" : "sets")"
+    guard setCount > 0 else { return "No working sets" }
+
+    let noun = setCount == 1 ? "set" : "sets"
+    return "\(completedSetCount)/\(setCount) \(noun)"
+  }
+
+  var isCompleted: Bool {
+    setCount > 0 && completedSetCount == setCount
+  }
+
+  var completionAccessibilityValue: String {
+    guard setCount > 0 else { return "No working sets" }
+    guard !isCompleted else { return "Completed" }
+
+    let noun = setCount == 1 ? "set" : "sets"
+    return "\(completedSetCount) of \(setCount) \(noun) completed"
+  }
+
+  var completionProgress: Double {
+    guard setCount > 0 else { return 0 }
+    return min(max(Double(completedSetCount) / Double(setCount), 0), 1)
+  }
+}
+
+private struct ExerciseProgressGaugeStyle: GaugeStyle {
+  @ScaledMetric(relativeTo: .body)
+  private var diameter = LayoutMetrics.Size.exerciseProgressIndicator
+
+  @ScaledMetric(relativeTo: .body)
+  private var lineWidth = LayoutMetrics.StrokeWidth.exerciseProgressIndicator
+
+  func makeBody(configuration: Configuration) -> some View {
+    ZStack {
+      Circle()
+        .stroke(.tint, lineWidth: lineWidth)
+        .opacity(0.25)
+
+      Circle()
+        .trim(from: 0, to: CGFloat(configuration.value))
+        .stroke(
+          .tint,
+          style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+        )
+        .rotationEffect(.degrees(-90))
+    }
+    .frame(width: diameter, height: diameter)
   }
 }
 
@@ -48,13 +93,19 @@ struct ExerciseCard: View {
 
         Spacer(minLength: LayoutMetrics.Spacing.small)
 
-        TrainingLoadText(load: exercise.volumeLoad)
-          .font(.headline.weight(.semibold))
+        Gauge(value: exercise.completionProgress) {
+          EmptyView()
+        }
+        .gaugeStyle(ExerciseProgressGaugeStyle())
+        .tint(.accentColor)
+        .accessibilityHidden(true)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .contentShape(.rect)
       .accessibilityElement(children: .combine)
     }
+    .opacity(exercise.isCompleted ? 0.5 : 1)
+    .accessibilityValue(exercise.completionAccessibilityValue)
     .padding(LayoutMetrics.Padding.card)
     .frame(maxWidth: .infinity, alignment: .leading)
     .glassEffect(

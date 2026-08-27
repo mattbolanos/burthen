@@ -60,6 +60,18 @@ final class WorkoutExercise {
     volumeLoad(in: weightUnit)
   }
 
+  var workingSets: [ExerciseSet] {
+    orderedSets.filter { $0.kind == .working }
+  }
+
+  var completedWorkingSetCount: Int {
+    workingSets.count { $0.isCompleted }
+  }
+
+  var isCompleted: Bool {
+    !workingSets.isEmpty && completedWorkingSetCount == workingSets.count
+  }
+
   func addSet(
     kind: ExerciseSetKind = .working,
     reps: Int,
