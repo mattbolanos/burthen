@@ -6,6 +6,37 @@ final class WorkoutFlowUITests: XCTestCase {
   }
 
   @MainActor
+  func testZeroWeightSetCanBeSavedAndCompleted() throws {
+    let app = XCUIApplication()
+    app.launchArguments = ["--ui-testing"]
+    app.launch()
+    app.buttons["Start Workout"].tap()
+    app.buttons["New Exercise"].tap()
+    createExercise(in: app, name: "Zero Weight Press", weight: "")
+    app.buttons["Start Workout"].tap()
+    app.staticTexts["Zero Weight Press"].tap()
+    app.buttons["Set 1"].tap()
+    app.buttons["Done"].tap()
+    XCTAssertTrue(try XCTUnwrap(app.buttons["Set 1"].value as? String).contains("0 pounds"))
+    app.buttons["Set 1"].tap()
+    app.pickerWheels.element(boundBy: 1).adjust(toPickerWheelValue: "1")
+    app.pickerWheels.element(boundBy: 1).adjust(toPickerWheelValue: "0")
+    app.buttons["Done"].tap()
+
+    let firstSet = app.buttons["Set 1"]
+    XCTAssertTrue(firstSet.waitForExistence(timeout: 3))
+    XCTAssertTrue(try XCTUnwrap(firstSet.value as? String).contains("0 pounds"))
+    app.buttons["Complete Set"].firstMatch.tap()
+    XCTAssertTrue(try XCTUnwrap(firstSet.value as? String).contains("Completed"))
+    XCTAssertTrue(app.buttons["Mark Set Incomplete"].exists)
+    firstSet.tap()
+    XCTAssertEqual(app.pickerWheels.element(boundBy: 1).value as? String, "0")
+    capture(app, named: "Zero weight retained in picker")
+    app.buttons["Done"].tap()
+    capture(app, named: "Pink completion and Add Set with native row height")
+  }
+
+  @MainActor
   func testPerSideLoggingAndCompletedVolume() throws {
     let app = XCUIApplication()
     app.launchArguments = ["--ui-testing"]
@@ -159,6 +190,7 @@ final class WorkoutFlowUITests: XCTestCase {
     XCTAssertFalse(app.tabBars.buttons["Workout"].exists)
     capture(app, named: "Completed workout")
 
+    app.swipeUp()
     app.buttons["Save as Template"].tap()
     XCTAssertTrue(app.navigationBars["New Template"].waitForExistence(timeout: 3))
     XCTAssertTrue(app.staticTexts["Test Press"].exists)
@@ -254,10 +286,62 @@ final class WorkoutFlowUITests: XCTestCase {
     XCTAssertFalse(app.buttons["active-workout-accessory"].exists)
     capture(app, named: "Achievement summary")
     app.descendants(matching: .any)["summary-volume-details"].tap()
-    XCTAssertTrue(app.staticTexts.matching(NSPredicate(
+    XCTAssertFalse(app.staticTexts.matching(NSPredicate(
       format: "label CONTAINS %@", "Volume adds weight"
-    )).firstMatch.waitForExistence(timeout: 3))
-    capture(app, named: "Volume details")
+    )).firstMatch.exists)
+    XCTAssertTrue(app.staticTexts["Load"].exists)
+    let completedSet = app.descendants(matching: .any).matching(NSPredicate(
+      format: "label == %@ AND value CONTAINS %@", "Set 1", "load 1,000 pounds"
+    )).firstMatch
+    XCTAssertTrue(completedSet.exists)
+    capture(app, named: "Load details without helper text or separators")
+  }
+
+  @MainActor
+  func testSummaryTemplateActionIsLastAndHiddenForTemplateWorkouts() throws {
+    XCUIDevice.shared.orientation = .portrait
+    let app = XCUIApplication()
+    app.launchArguments = ["--ui-testing"]
+    app.launch()
+    app.buttons["Start Workout"].tap()
+    app.buttons["New Exercise"].tap()
+    createExercise(in: app, name: "Summary Press", weight: "100")
+    app.buttons["Start Workout"].tap()
+    app.staticTexts["Summary Press"].tap()
+    completeWorkingSets(in: app)
+    app.navigationBars["Summary Press"].buttons.element(boundBy: 0).tap()
+    app.buttons["Finish Workout"].tap()
+    XCTAssertTrue(app.navigationBars["Workout Summary"].waitForExistence(timeout: 5))
+    capture(app, named: "Summary header and completed work")
+
+    app.swipeUp()
+    let saveTemplate = app.buttons["Save as Template"]
+    XCTAssertTrue(saveTemplate.isHittable)
+    let volume = app.descendants(matching: .any)["summary-volume-details"]
+    XCTAssertGreaterThanOrEqual(saveTemplate.frame.minY, volume.frame.maxY)
+    XCTAssertLessThan(saveTemplate.frame.maxY, app.tabBars.firstMatch.frame.minY)
+    capture(app, named: "Summary final action and bottom clearance")
+    saveTemplate.tap()
+    XCTAssertTrue(app.navigationBars["New Template"].waitForExistence(timeout: 3))
+    app.textFields["Name"].tap()
+    app.textFields["Name"].typeText("Summary Routine")
+    app.navigationBars["New Template"].buttons["Add"].tap()
+    XCTAssertTrue(app.navigationBars["Workout Summary"].waitForExistence(timeout: 3))
+    app.navigationBars["Workout Summary"].buttons.element(boundBy: 0).tap()
+    app.buttons["Add Workout"].tap()
+    app.buttons["Choose a Template"].tap()
+    app.staticTexts["Summary Routine"].tap()
+    XCTAssertTrue(app.buttons["Finish Workout"].waitForExistence(timeout: 5))
+    app.staticTexts["Summary Press"].tap()
+    completeWorkingSets(in: app)
+    app.navigationBars["Summary Press"].buttons.element(boundBy: 0).tap()
+    app.buttons["Finish Workout"].tap()
+    XCTAssertTrue(app.navigationBars["Workout Summary"].waitForExistence(timeout: 5))
+    XCTAssertFalse(saveTemplate.exists)
+    app.swipeUp()
+    XCTAssertFalse(saveTemplate.exists)
+    XCTAssertTrue(volume.isHittable)
+    capture(app, named: "Template workout summary without save action")
   }
 
   @MainActor

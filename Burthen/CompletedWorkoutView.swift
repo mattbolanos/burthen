@@ -19,18 +19,6 @@ struct CompletedWorkoutView: View {
     List {
       CompletedWorkoutHeader(workout: workout, showsCompletion: showsCompletion)
 
-      if showsCompletion {
-        Button(
-          "Save as Template",
-          systemImage: "rectangle.stack.badge.plus",
-          action: presentTemplateEditor
-        )
-        .disabled(workout.templateExercisePlans.isEmpty)
-        .listRowSeparator(.hidden)
-        .listRowBackground(Color.clear)
-        .accessibilityHint("Creates a reusable template from this workout’s exercises.")
-      }
-
       if orderedExercises.isEmpty {
         ContentUnavailableView {
           ContentUnavailableLogoLabel(title: "No Exercises")
@@ -53,8 +41,25 @@ struct CompletedWorkoutView: View {
       Section {
         CompletedWorkoutVolumeDetails(workout: workout)
       }
+
+      if showsCompletion && workout.sourceTemplate == nil && !workout.templateExercisePlans.isEmpty {
+        Section {
+          Button(
+            "Save as Template",
+            systemImage: "rectangle.stack.badge.plus",
+            action: presentTemplateEditor
+          )
+          .tint(.pink)
+          .listRowInsets(LayoutMetrics.Insets.finalActionRow)
+          .listRowSeparator(.hidden)
+          .listRowBackground(Color.clear)
+          .accessibilityHint("Creates a reusable template from this workout’s exercises.")
+        }
+      }
     }
     .listStyle(.plain)
+    .contentMargins(.bottom, LayoutMetrics.Spacing.extraLarge, for: .scrollContent)
+    .tint(.pink)
     .scrollContentBackground(.hidden)
     .background(Color(uiColor: .systemGroupedBackground))
     .navigationTitle("Workout Summary")
