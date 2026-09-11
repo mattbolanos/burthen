@@ -37,6 +37,14 @@ struct CompletedWorkoutSetRow: View {
       }
 
       Spacer(minLength: LayoutMetrics.Spacing.small)
+
+      if let load = exerciseSet.volumeLoad {
+        Text(load.displayText)
+          .font(.subheadline.weight(.semibold))
+          .monospacedDigit()
+          .foregroundStyle(.pink)
+          .multilineTextAlignment(.trailing)
+      }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .accessibilityElement(children: .ignore)
@@ -72,7 +80,8 @@ struct CompletedWorkoutSetRow: View {
     let formattedWeight = weight.formatted(
       .number.precision(.fractionLength(0...1))
     )
+    let loadDescription = exerciseSet.volumeLoad.map { ", load \($0.accessibilityText)" } ?? ""
     return
-      "\(setKind), \(repetitions) at \(formattedWeight) \(weightUnit.spokenName)"
+      "\(setKind), \(repetitions) at \(formattedWeight) \(weightUnit.spokenName)\(loadDescription)"
   }
 }
